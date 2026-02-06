@@ -19,12 +19,4 @@ starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.n
 
 source ~/.zoxide.nu
 
-def --env y [...args] {
-	let tmp = (mktemp -t "yazi-cwd.XXXXXX")
-	^yazi ...$args --cwd-file $tmp
-	let cwd = (open $tmp)
-	if $cwd != $env.PWD and ($cwd | path exists) {
-		cd $cwd
-	}
-	rm -fp $tmp
-}
+use ./tools *
