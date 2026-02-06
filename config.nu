@@ -20,5 +20,3 @@ starship init nu | save -f ($nu.data-dir | path join "vendor/autoload/starship.n
 source ~/.zoxide.nu
 
 source ./tools/tools.nu
-
-source ./custom-completions/custom-completions.nu
