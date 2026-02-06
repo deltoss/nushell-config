@@ -1,2 +1,2 @@
 source ./aichat/aichat.nu
-use ./yazi/ *
+use ./yazi.nu *
