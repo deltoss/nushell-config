@@ -1,1 +1,0 @@
-export use ./yazi.nu *
