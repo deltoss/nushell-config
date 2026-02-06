@@ -14,4 +14,6 @@ use ../nu_scripts/custom-completions/op/op-completions.nu *
 use ../nu_scripts/custom-completions/bitwarden-cli/bitwarden-cli-completions.nu *
 use ../nu_scripts/custom-completions/aws/aws-completions.nu *
 
-use ../nu_scripts/custom-completions/winget/winget-completions.nu *
+if $nu.os-info.name == "windows" {
+  use ../nu_scripts/custom-completions/winget/winget-completions.nu *
+}
