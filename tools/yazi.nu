@@ -1,4 +1,4 @@
-export def --env y [...args] {
+export def --wrapped --env y [...args] {
 	let tmp = (mktemp -t "yazi-cwd.XXXXXX")
 	^yazi ...$args --cwd-file $tmp
 	let cwd = (open $tmp)
@@ -8,7 +8,7 @@ export def --env y [...args] {
 	rm -fp $tmp
 }
 
-export def yp [...args] {
+export def --wrapped yp [...args] {
   let tmp = (mktemp)
   ^yazi ...$args --cwd-file $tmp
   let cwd = (open $tmp)
