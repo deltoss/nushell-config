@@ -7,3 +7,5 @@ export-env {
 
 mkdir ($nu.data-dir | path join "vendor/autoload")
 intelli-shell init nushell | save -f ($nu.data-dir | path join "vendor/autoload/intelli-shell.nu")
+
+export alias is = intelli-shell
