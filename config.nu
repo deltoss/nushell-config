@@ -22,3 +22,5 @@ source ~/.zoxide.nu
 source ./tools/tools.nu
 
 source ./custom-completions/custom-completions.nu
+
+source ./nu_scripts/themes/nu-themes/atelier-cave-light.nu
