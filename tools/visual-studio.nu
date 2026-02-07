@@ -16,6 +16,6 @@ export def devenv [...args] {
     let devenvPath = ($vsPath | path join "Common7" "IDE" "devenv.exe")
     ^$devenvPath ...$args
   } else {
-    print --stderr "No Visual Studio installation found"
+    error make { msg: "No Visual Studio installation found" }
   }
 }
