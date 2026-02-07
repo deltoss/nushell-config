@@ -3,7 +3,7 @@
 #   devenv MySolution.sln /build "Debug|Any CPU"
 #   devenv MySolution.sln /rebuild "Release|x64"
 #   devenv MySolution.sln /clean
-export def devenv [...args] {
+export def --wrapped devenv [...args] {
   let vsPath = (
     ^'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
     -latest
