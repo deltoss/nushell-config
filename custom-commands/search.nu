@@ -8,6 +8,7 @@ export def zoxide []: nothing -> path {
 }
 
 # Search for everything on your Windows PC
+@example "With piped query" { ".json" | search everything }
 export def everything []: string -> path, nothing -> path {
   let query = $in
   let esTemplate = "es count:100 -p -r {q:1} -r {q:2} -r {q:3} -r {q:4} -r {q:5} -r {q:6} -r {q:7} -r {q:8} -r {q:9}"
