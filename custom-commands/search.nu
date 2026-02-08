@@ -21,3 +21,15 @@ export def everything []: string -> path, nothing -> path {
   # Sleep command is there to debounce the query so we don't search on every single letter typed
   null | fzf --bind $"change:reload-sync\(sleep 100ms; ($esTemplate)\)" --phony --query "" --header="Search - Query"
 }
+
+# Search for files from cwd
+@example "With piped query" { ".sln" | search files }
+export def files []: string -> path, nothing -> path {
+  let query = $in
+  if ($query | is-not-empty) {
+    fd $query | fzf --tac --header="Find - In Current Directory" --preview $env.FZF_CUSTOM_PREVIEW
+    return
+  }
+
+  fd | fzf --tac --header="Find - In Current Directory" --preview $env.FZF_CUSTOM_PREVIEW
+}
