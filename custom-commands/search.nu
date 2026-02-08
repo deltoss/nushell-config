@@ -3,12 +3,12 @@ export def main []: nothing -> nothing {
 }
 
 # Search for commonly used directories
-export def zoxide []: nothing -> string {
+export def zoxide []: nothing -> path {
    zoxide query --interactive
 }
 
 # Search for everything on your Windows PC
-export def everything []: string -> string, nothing -> string {
+export def everything []: string -> path, nothing -> path {
   let query = $in
   let esTemplate = "es count:100 -p -r {q:1} -r {q:2} -r {q:3} -r {q:4} -r {q:5} -r {q:6} -r {q:7} -r {q:8} -r {q:9}"
   if ($query | is-not-empty) {
