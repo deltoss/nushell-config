@@ -5,11 +5,13 @@ export def url [
   dest_branch?: string # Destination branch to create a pull request for
   repo_info?: record # The repo information
 ] {
-  let repo = $repo_info | default (repo-info)
+  let repo = $repo_info | default { repo-info }
   let src_branch = $repo.branch
-  let dest = $dest_branch | default (select-branch | if ($in | is-not-empty) {
-    get branch | str replace '^origin\/' ''
-  })
+  let dest = $dest_branch | default {
+    select-branch | if ($in | is-not-empty) {
+      get branch | str replace '^origin\/' ''
+    }
+  }
 
   if ($dest | is-empty) {
     log info "Destination branch not selected. Quitting..."
