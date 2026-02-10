@@ -3,8 +3,9 @@ export def main []: nothing -> nothing {
 }
 
 # Search for commonly used directories
-export def zoxide []: nothing -> path {
-   zoxide query --interactive
+export def zoxide []: string -> path, nothing -> path {
+  let query = $in | default ""
+  zoxide query --interactive $query
 }
 
 # Search for everything on your Windows PC
