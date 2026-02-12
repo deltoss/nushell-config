@@ -18,6 +18,8 @@ source ./tools/tools.nu
 
 source ./custom-completions/custom-completions.nu
 
+source ./keybinds.nu
+
 use ./custom-commands/ *
 
 # For preview of themes, see https://github.com/nushell/nu_scripts/blob/main/themes/screenshots/README.md
