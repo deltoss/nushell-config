@@ -1,6 +1,6 @@
 $env.config.menus ++= [{
     name: help_menu
-    only_buffer_difference: true # Search is done on the text written after activating the menu
+    only_buffer_difference: false # Search is done on the text written before activating the menu
     marker: "? "                 # Indicator that appears with the menu is active
     type: {
         layout: description      # Type of menu
