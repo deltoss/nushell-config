@@ -14,11 +14,11 @@
 # options using:
 #     config nu --doc | nu-highlight | less -R
 
+source ./keybinds.nu
+
 source ./tools/tools.nu
 
 source ./custom-completions/custom-completions.nu
-
-source ./keybinds.nu
 
 use ./custom-commands/ *
 
