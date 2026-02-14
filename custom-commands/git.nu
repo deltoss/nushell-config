@@ -1,3 +1,20 @@
+export def menu [] {
+  print 'b ⟶ Select git [B]ranch'
+
+  mut result = ''
+  loop {
+    let key = (input listen --types [key])
+    match [$key.code $key.modifiers] {
+      ['b', []] => { $result = (select-branch | get --optional branch); break }
+      _ => {
+        print "That key wasn't recognized."
+      }
+    }
+  }
+
+  $result
+}
+
 export def repo-info [] {
   let remote_url = (git config --get remote.origin.url | str trim)
   let branch = (git branch --show-current | str trim)
@@ -30,13 +47,11 @@ export def repo-info [] {
 }
 
 export def select-branch --wrapped [
-  ...rest  # Rest parameter for additional selections
+  ...rest
 ] {
-  let branches = git branch -a --color | lines
-  let all_options = $rest | append $branches
-
   let interaction = (
-    $all_options 
+    git branch -a --color ...$rest
+    | lines
     | str join "\n" 
     | fzf --print-query --ansi --header="Git - Branches" 
     | lines
