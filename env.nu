@@ -1,3 +1,16 @@
+$env.XDG_CONFIG_HOME = "~/.config" | path expand
+$env.EDITOR = "nvim"
+# Custom environment variable used within nvim & shell scripts to start OpenCode CLI
+$env.OPENCODE_PORT = 4096
+
+if $nu.os-info.name == "windows" {
+  # Configure Yazi to open files correctly on Windows.
+  # See:
+  #   https://yazi-rs.github.io/docs/installation#windows
+  $env.YAZI_FILE_ONE = "C:\\Program Files\\Git\\usr\\bin\\file.exe"
+  $env.YAZI_CONFIG_HOME = $"($env.XDG_CONFIG_HOME)/yazi"
+}
+
 # Configure Nushell command line editing experience to behave like vim.
 $env.config.edit_mode = 'vi'
 $env.config.cursor_shape.vi_insert = "blink_line"
