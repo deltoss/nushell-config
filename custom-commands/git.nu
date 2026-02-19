@@ -1,11 +1,27 @@
 export def menu [] {
   print 'b ⟶ Select git [B]ranch'
+  print 'c ⟶ Select git [C]ommit'
+  print 'f ⟶ Select git [F]ile'
+  print 'l ⟶ Show git [L]og'
+  print 'g ⟶ Lazy[G]it'
+  print 'G ⟶ Edit GitHub [G]ists'
+  print 'm ⟶ Resolve git [M]erge conflicts'
+  print 'p ⟶ Open [P]ull request'
+  print 'w ⟶ [W]orktree'
 
   mut result = ''
   loop {
     let key = (input listen --types [key])
     match [$key.code $key.modifiers] {
       ['b', []] => { $result = (select-branch | get --optional branch); break }
+      ['c', []] => { $result = select-commit; break }
+      ['f', []] => { $result = select-file; break }
+      ['l', []] => { $result = log; break }
+      ['g', []] => { commandline edit  --accept --replace "lazygit"; break }
+      ['G', []] => { commandline edit  --accept --replace "gh gist edit"; break }
+      ['m', []] => { commandline edit  --accept --replace "git mergetool"; break }
+      ['p', []] => { commandline edit  --accept --replace "pr"; break }
+      ['w', []] => { break }
       _ => {
         print "That key wasn't recognized."
       }
@@ -47,13 +63,12 @@ export def repo-info [] {
 }
 
 export def select-branch --wrapped [
+  --extra: list<string> = []
   ...rest
 ] {
-  let interaction = (
-    git branch -a --color ...$rest
-    | fzf --print-query --ansi --header="Git - Branches"
-    | lines
-  )
+  let branches = (git branch -a --color ...$rest | lines)
+  let all = ($extra ++ $branches)
+  let interaction = $all | str join "\n" | fzf --print-query --ansi --header="Git - Branches" | lines
 
   # Return null if nothing selected
   if ($interaction | is-empty) {
@@ -83,10 +98,43 @@ export def select-branch --wrapped [
 export def select-commit --wrapped [
   ...rest
 ] {
-  git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p" ...$rest
+  ^git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p" ...$rest
   | fzf --print-query --ansi --header="Git - Commits" 
   | str trim
   | ansi strip
   | split row ' '
   | first
+}
+
+export def select-file --wrapped [
+  ...rest
+] {
+  git status --porcelain ...$rest | fzf --header="Git - Changed Files"
+  | str substring 3..-1
+  | str trim
+}
+
+export def log --wrapped [
+  ...rest
+] {
+  let $args = [
+    '--graph',
+    '--pretty=format:%C(yellow)%h%Creset %C(green)%ad%Creset %C(bold blue)%an%Creset %C(red)%d%Creset %s %C(dim white)%b%Creset',
+    '--date=short',
+    '--color',
+    ...$rest
+  ]
+
+  ^git log ...$args
+}
+
+export def log-menu --wrapped [
+  ...rest
+] {
+  let $selection = select-branch --extra ["  HEAD", "  --all"]
+  if ($selection | is-empty) {
+    return
+  }
+
+  log ($selection | get branch)
 }
