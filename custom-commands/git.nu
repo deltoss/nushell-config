@@ -51,19 +51,8 @@ export def select-branch --wrapped [
 ] {
   let interaction = (
     git branch -a --color ...$rest
+    | fzf --print-query --ansi --header="Git - Branches"
     | lines
-    | str join "\n" 
-    | fzf --print-query --ansi --header="Git - Branches" 
-    | lines
-    | each { |line|
-        $line 
-        | str trim
-        | str replace --regex '^\*\s*' ''
-        | str replace --regex '^remotes/' ''
-        | str replace --regex '\x1b\[[0-9;]*m' ''
-        | str replace --regex '\+\s+' ''
-        | str replace --regex '\s*->.+' ''
-      }
   )
 
   # Return null if nothing selected
@@ -80,7 +69,24 @@ export def select-branch --wrapped [
   } else {
     return {
       query: ($interaction | get 0)
-      branch: ($interaction | get 1)
+      branch: ($interaction | get 1 
+        | str trim 
+        | str replace --regex '^\*\s*' ''
+        | str replace --regex '^remotes/' ''
+        | str replace --regex '\x1b\[[0-9;]*m' ''
+        | str replace --regex '\+\s+' ''
+        | str replace --regex '\s*->.+' '')
     }
   }
+}
+
+export def select-commit --wrapped [
+  ...rest
+] {
+  git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p" ...$rest
+  | fzf --print-query --ansi --header="Git - Commits" 
+  | str trim
+  | ansi strip
+  | split row ' '
+  | first
 }
