@@ -1,4 +1,5 @@
 source ./fzf.nu
+source ./tv.nu
 source ./zoxide.nu
 source ./intelli-shell.nu
 source ./aichat/aichat.nu
