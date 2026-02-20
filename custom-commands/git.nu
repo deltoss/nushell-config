@@ -1,3 +1,6 @@
+use ./git-helpers.nu [repo-folder repo-info parse-git-url]
+
+# Bring up interactive git menu for custom git operations
 export def menu [] {
   print 'b ⟶ Select git [B]ranch'
   print 'c ⟶ Select git [C]ommit'
@@ -13,9 +16,9 @@ export def menu [] {
   loop {
     let key = (input listen --types [key])
     match [$key.code $key.modifiers] {
-      ['b', []] => { $result = (select-branch | get --optional branch); break }
-      ['c', []] => { $result = select-commit; break }
-      ['f', []] => { $result = select-file; break }
+      ['b', []] => { $result = (select branch | get --optional branch); break }
+      ['c', []] => { $result = select commit; break }
+      ['f', []] => { $result = select file; break }
       ['l', []] => { $result = log; break }
       ['g', []] => { commandline edit  --accept --replace "lazygit"; break }
       ['G', []] => { commandline edit  --accept --replace "gh gist edit"; break }
@@ -31,38 +34,8 @@ export def menu [] {
   $result
 }
 
-export def repo-info [] {
-  let remote_url = (git config --get remote.origin.url | str trim)
-  let branch = (git branch --show-current | str trim)
-
-  # Try GitHub
-  let github = ($remote_url | parse -r 'github\.com[:\/]([^\/:]+)\/([^.]+)\.git')
-  if not ($github | is-empty) {
-    return {
-      organization: ($github | get capture0.0)
-      repository: ($github | get capture1.0)
-      branch: $branch
-      url: $remote_url
-      type: "GitHub"
-    }
-  }
-
-  # Try Bitbucket
-  let bitbucket = ($remote_url | parse -r 'bitbucket\.org[:\/]([^\/:]+)\/([^.]+)\.git')
-  if not ($bitbucket | is-empty) {
-    return {
-      organization: ($bitbucket | get capture0.0)
-      repository: ($bitbucket | get capture1.0)
-      branch: $branch
-      url: $remote_url
-      type: "BitBucketCloud"
-    }
-  }
-
-  null
-}
-
-export def select-branch --wrapped [
+# Select a git branch's name
+export def "select branch" --wrapped [
   --extra: list<string> = []
   ...rest
 ] {
@@ -95,7 +68,8 @@ export def select-branch --wrapped [
   }
 }
 
-export def select-commit --wrapped [
+# Select a git commit's hash
+export def "select commit" --wrapped [
   ...rest
 ] {
   ^git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p" ...$rest
@@ -106,7 +80,8 @@ export def select-commit --wrapped [
   | first
 }
 
-export def select-file --wrapped [
+# Select a changed file's path
+export def "select file" --wrapped [
   ...rest
 ] {
   git status --porcelain ...$rest | fzf --header="Git - Changed Files"
@@ -114,6 +89,7 @@ export def select-file --wrapped [
   | str trim
 }
 
+# Log with more readable formatting
 export def log --wrapped [
   ...rest
 ] {
@@ -128,7 +104,8 @@ export def log --wrapped [
   ^git log ...$args
 }
 
-export def log-menu --wrapped [
+# Log a branch interactively with a branch menu
+export def "log menu" --wrapped [
   ...rest
 ] {
   let $selection = select-branch --extra ["  HEAD", "  --all"]
@@ -137,4 +114,42 @@ export def log-menu --wrapped [
   }
 
   log ($selection | get branch)
+}
+
+# Get detailed information about git worktrees
+export def "worktree info" [] {
+  let worktrees = git worktree list --porcelain | str trim
+  let entries = $worktrees | split row --regex '(\r?\n){2}'
+
+  if ($entries | is-empty) {
+    print "No worktrees found."
+    return
+  }
+
+  let repo_folder = repo-folder
+  let parent_folder = if ($repo_folder | is-not-empty) {
+    $repo_folder | path dirname
+  }
+
+  $entries | each { |entry|
+    let lines = $entry | lines
+    let full_path = $lines | get 0 | str replace --regex '^worktree ' ''
+    let relative_path = if (($parent_folder | is-not-empty) and ($full_path | is-not-empty)) {
+      $full_path | path relative-to $parent_folder
+    } else {
+      $full_path
+    }
+
+    {
+      Branch: (if ($lines.2 | str starts-with 'branch ') {
+        $lines.2 | str replace --regex '^branch refs/heads/' ''
+      } else {
+        '(detached)'
+      })
+      RelativePath: $relative_path
+      Path: $full_path
+      CommitShort: ($lines.1 | str replace --regex '^HEAD ' '' | str substring 0..7)
+      Commit: ($lines.1 | str replace --regex '^HEAD ' '')
+    }
+  }
 }

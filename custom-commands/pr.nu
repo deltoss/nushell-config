@@ -1,5 +1,6 @@
 use std/log
-use ./git.nu [ repo-info select-branch ]
+use ./git-helpers.nu [ repo-info ]
+use ./git.nu [ "select branch" ]
 
 export def url [
   dest_branch?: string # Destination branch to create a pull request for
