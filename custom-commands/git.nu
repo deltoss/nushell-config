@@ -2,15 +2,16 @@ use ./git-helpers.nu [repo-folder repo-info parse-git-url]
 
 # Bring up interactive git menu for custom git operations
 export def menu [] {
-  print 'b ⟶ Select git [B]ranch'
-  print 'c ⟶ Select git [C]ommit'
-  print 'f ⟶ Select git [F]ile'
-  print 'l ⟶ Show git [L]og'
-  print 'g ⟶ Lazy[G]it'
-  print 'G ⟶ Edit GitHub [G]ists'
-  print 'm ⟶ Resolve git [M]erge conflicts'
-  print 'p ⟶ Open [P]ull request'
-  print 'w ⟶ [W]orktree'
+  print $"(ansi bo)(ansi cyan)b(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)B(ansi reset)]ranch"
+  print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)C(ansi reset)]ommit"
+  print $"(ansi bo)(ansi cyan)f(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)F(ansi reset)]ile"
+  print $"(ansi bo)(ansi cyan)l(ansi bl) ⟶ (ansi reset)Show git [(ansi bo)L(ansi reset)]og"
+  print $"(ansi bo)(ansi cyan)g(ansi bl) ⟶ (ansi reset)Lazy[(ansi bo)G(ansi reset)]it"
+  print $"(ansi bo)(ansi cyan)G(ansi bl) ⟶ (ansi reset)Edit GitHub [(ansi bo)G(ansi reset)]ists"
+  print $"(ansi bo)(ansi cyan)m(ansi bl) ⟶ (ansi reset)Resolve git [(ansi bo)M(ansi reset)]erge conflicts"
+  print $"(ansi bo)(ansi cyan)p(ansi bl) ⟶ (ansi reset)Open [(ansi bo)P(ansi reset)]ull request"
+  print $"(ansi bo)(ansi cyan)w(ansi bl) ⟶ (ansi reset)[(ansi bo)W(ansi reset)]orktree"
+  print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
 
   mut result = ''
   loop {
@@ -25,6 +26,8 @@ export def menu [] {
       ['m', []] => { commandline edit  --accept --replace "git mergetool"; break }
       ['p', []] => { commandline edit  --accept --replace "pr"; break }
       ['w', []] => { break }
+      ['q', []] => { break }
+      ['c', [keymodifiers(control)]] => { print 'Terminated with Ctrl-C'; break }
       _ => {
         print "That key wasn't recognized."
       }
