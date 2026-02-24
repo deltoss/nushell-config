@@ -107,6 +107,29 @@ export def log --wrapped [
   ^git log ...$args
 }
 
+# Log with Nushell table
+# See: https://www.nushell.sh/cookbook/parsing_git_log.html
+export def "log table" --wrapped [
+  ...rest
+] {
+  let $args = [
+    '-n',
+    '100',
+    "--pretty=format:%C(yellow)%h%Creset»¦«%aD»¦«%C(bold blue)%an%Creset»¦«%C(red)%d%Creset»¦«%s\n%C(dim white)%b%Creset¦¦¦",
+    '--color',
+    ...$rest
+  ]
+
+  ^git log ...$args
+  | inspect
+  | split row "¦¦¦"
+  | inspect
+  | split column "»¦«" commit date name branch message
+  | str trim # Removes newline characters proceeding each record
+  | drop 1 # Removes last empty record
+  | upsert date {|d| $d.date | into datetime}
+}
+
 # Log a branch interactively with a branch menu
 export def "log menu" --wrapped [
   ...rest
