@@ -28,4 +28,6 @@ $env.config.datetime_format.normal = "%d/%m/%y %I:%M:%S%p"
 # Display output tables with more information
 $env.config.hooks.display_output = { table -e }
 
-zoxide init nushell | save -f ~/.zoxide.nu
+let env_file = ($nu.default-config-dir | path join ".env.json")
+let vars = if ($env_file | path exists) { open $env_file } else { {} }
+load-env $vars
