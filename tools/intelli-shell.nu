@@ -5,7 +5,9 @@ export-env {
   $env.INTELLI_SEARCH_HOTKEY = 'control char_e'
 }
 
-mkdir ($nu.data-dir | path join "vendor/autoload")
-intelli-shell init nushell | save -f ($nu.data-dir | path join "vendor/autoload/intelli-shell.nu")
+job spawn {
+  mkdir ($nu.data-dir | path join "vendor/autoload")
+  intelli-shell init nushell | save -f ($nu.data-dir | path join "vendor/autoload/intelli-shell.nu")
+}
 
 export alias is = intelli-shell
