@@ -4,5 +4,8 @@ export-env {
   $env._ZO_FZF_OPTS = $env.FZF_DEFAULT_OPTS ++ $" --preview='($env.ZOXIDE_FZF_CUSTOM_PREVIEW)'"
 }
 
-source ~/.zoxide.nu
+job spawn {
+  zoxide init nushell | save -f ~/.zoxide.nu
+}
 
+source ~/.zoxide.nu
