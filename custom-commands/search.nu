@@ -20,8 +20,7 @@ export def everything []: string -> path, nothing -> path {
     error make { msg: $"Searching everything not supported for your OS ($nu.os-info.name)" }
   }
   if ($query | is-not-empty) {
-    fzf --bind $"start:reload:($searchCommandTemplate)" --bind $"change:reload-sync\(sleep 100ms; ($searchCommandTemplate)\)" --query $query --header="Search - Everything"
-    return
+    return (fzf --bind $"start:reload:($searchCommandTemplate)" --bind $"change:reload-sync\(sleep 100ms; ($searchCommandTemplate)\)" --query $query --header="Search - Everything")
   }
 
   # Pipe null to disable the initial unnecessary search upon entering fzf
@@ -34,8 +33,7 @@ export def everything []: string -> path, nothing -> path {
 export def files []: string -> path, nothing -> path {
   let query = $in
   if ($query | is-not-empty) {
-    fd $query | fzf --tac --header="Find - In Current Directory" --preview $env.FZF_CUSTOM_PREVIEW
-    return
+    return (fd $query | fzf --tac --header="Find - In Current Directory" --preview $env.FZF_CUSTOM_PREVIEW)
   }
 
   fd | fzf --tac --header="Find - In Current Directory" --preview $env.FZF_CUSTOM_PREVIEW
