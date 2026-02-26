@@ -1,6 +1,7 @@
 use ./git-helpers.nu [repo-folder, worktrees-folder]
 use ./git.nu ['select branch']
 
+# List git worktrees
 export def list [] {
   let output = git worktree list --porcelain | str trim
   let entries = $output | split row "\n\n"
@@ -64,6 +65,7 @@ export def select [] {
   $selected_worktree | default nothing
 }
 
+# Switch to the directory of a git worktree
 export def --env switch [] {
   let chosen_worktree = select
   if ($chosen_worktree | is-empty) {
@@ -74,6 +76,7 @@ export def --env switch [] {
   print $"(ansi green)Switched to worktree: ($chosen_worktree.path)(ansi reset)"
 }
 
+# Adds a git worktree and change to its directory
 export def --env add [] {
   let worktree_path = worktrees-folder
   if ($worktree_path | is-empty) {
@@ -169,6 +172,7 @@ export def --env add [] {
   }
 }
 
+# Remove a git worktree
 export def --env remove [] {
   let chosen_worktree = select
   if ($chosen_worktree | is-empty) {
