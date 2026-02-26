@@ -14,7 +14,7 @@ export def --wrapped devenv [...args] {
 
   if ($vsPath | is-not-empty) {
     let devenvPath = ($vsPath | path join "Common7" "IDE" "devenv.exe")
-    ^$devenvPath ...$args
+    job spawn { ^$devenvPath ...$args } | ignore
   } else {
     error make { msg: "No Visual Studio installation found" }
   }
