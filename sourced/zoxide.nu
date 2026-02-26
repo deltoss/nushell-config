@@ -1,3 +1,5 @@
+# Overrides z command that uses the custom command `search everything`
+# if the queried common directory doesn't exist in zoxide
 def --env z [...args] {
   let query = ($args | str join " ")
   if ($query == "~") {
