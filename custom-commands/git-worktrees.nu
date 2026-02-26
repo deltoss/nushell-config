@@ -1,4 +1,5 @@
-use ./git-helpers.nu [repo-folder]
+use ./git-helpers.nu [repo-folder, worktrees-folder]
+use ./git.nu ['select branch']
 
 export def list [] {
   let output = git worktree list --porcelain | str trim
@@ -58,7 +59,130 @@ export def select [] {
   # fzf only gives us the selected string back
   # Get the original worktree object from the selection
   let selected_branch = $selected | str replace --regex '\s+.+\s+.+' '' | str trim
-  let selected_worktree = $worktrees | where branch == $selected_branch
+  let selected_worktree = $worktrees | where branch == $selected_branch | first
 
-  $selected_worktree
+  $selected_worktree | default nothing
+}
+
+export def --env switch [] {
+  let chosen_worktree = select
+  if ($chosen_worktree | is-empty) {
+    return
+  }
+
+  cd $chosen_worktree.path
+  print $"(ansi green)Switched to worktree: ($chosen_worktree.path)(ansi reset)"
+}
+
+export def --env add [] {
+  let worktree_path = worktrees-folder
+  if ($worktree_path | is-empty) {
+    error make {msg: "Failed to get worktrees folder path"}
+  }
+
+  # Select branch interactively
+  let interaction = select branch
+  if ($interaction | is-empty) {
+    print $"(ansi yellow)No branch was selected.(ansi reset)"
+    return
+  }
+
+  # Determine if creating new branch or using existing
+  let new_branch = ($interaction.query | is-not-empty) and ($interaction.branch | is-empty)
+  let selected_branch = if $new_branch {
+    print $"(ansi green)Will create new branch: ($interaction.query)(ansi reset)"
+    $interaction.query
+  } else {
+    $interaction.branch | str replace --regex '^origin/' ''
+  }
+
+  # Validate branch name
+  if ($selected_branch | str trim | is-empty) {
+    error make {msg: "Selected branch name is empty or invalid"}
+  }
+
+  let relative_path = input $"Enter the new worktree directory name [default: ($selected_branch)]: "
+    | str trim
+    | default --empty $selected_branch
+
+  # Ensure worktree parent directory exists
+  if not ($worktree_path | path exists) {
+    mkdir $worktree_path
+    print $"(ansi green)Created worktree folder at: ($worktree_path)(ansi reset)"
+  }
+
+  let full_path = ($worktree_path | path join $relative_path)
+
+  # Check if worktree path already exists
+  if ($full_path | path exists) {
+    error make {msg: $"Worktree path already exists: ($full_path)"}
+  }
+
+  try {
+    print $"(ansi green)Creating worktree at: ($full_path)(ansi reset)"
+
+    # Execute git worktree add
+    let git_result = if $new_branch {
+      ^git worktree add $full_path -b $selected_branch
+        | complete
+    } else {
+      ^git worktree add $full_path $selected_branch
+        | complete
+    }
+
+    if $git_result.exit_code != 0 {
+      error make {
+        msg: $"Git worktree command failed with exit code ($git_result.exit_code)"
+        label: {
+          text: $git_result.stderr
+          span: (metadata $git_result).span
+        }
+      }
+    }
+
+    # Switch to new worktree
+    try {
+      cd $full_path
+      print $"(ansi green)Created and switched to worktree: ($full_path)(ansi reset)"
+    } catch {
+      print $"(ansi yellow)Worktree created but failed to switch location: ($in)(ansi reset)"
+      print $"(ansi yellow)Worktree created at: ($full_path)(ansi reset)"
+    }
+
+  } catch {|err|
+    print $"(ansi red)Create-Worktree failed: ($err.msg)(ansi reset)"
+
+    # Cleanup: Try to remove partially created worktree
+    if ($full_path | is-not-empty) and ($full_path | path exists) {
+      try {
+        ^git worktree remove $full_path --force
+          | complete
+          | ignore
+        print $"(ansi yellow)Cleaned up partial worktree at: ($full_path)(ansi reset)"
+      } catch {
+        print $"(ansi yellow_bold)Warning: Could not clean up partial worktree at: ($full_path)(ansi reset)"
+      }
+    }
+
+    # Re-raise error
+    error make $err
+  }
+}
+
+export def --env remove [] {
+  let chosen_worktree = select
+  if ($chosen_worktree | is-empty) {
+    return
+  }
+
+  let chosen_path = $chosen_worktree.path
+  let current_path = $env.PWD | str replace --all "\\" "/"
+
+  if $chosen_path == $current_path {
+    print $"(ansi red)Can't remove the worktree you're currently in. Switch to another worktree first, then try again.(ansi reset)"
+    return
+  }
+
+  ^git worktree remove --force $chosen_path
+  print $"(ansi green)Removed worktree: ($chosen_path)(ansi reset)"
 }
