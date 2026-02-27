@@ -25,7 +25,7 @@ export def menu [] {
       ['G', []] => { commandline edit  --accept --replace "gh gist edit"; break }
       ['m', []] => { commandline edit  --accept --replace "git mergetool"; break }
       ['p', []] => { commandline edit  --accept --replace "pr"; break }
-      ['w', []] => { break }
+      ['w', []] => { commandline edit  --accept --replace "worktree"; break }
       ['q', []] => { break }
       ['c', [keymodifiers(control)]] => { print 'Terminated with Ctrl-C'; break }
       _ => {
@@ -140,42 +140,4 @@ export def "log menu" --wrapped [
   }
 
   log ($selection | get branch)
-}
-
-# Get detailed information about git worktrees
-export def "worktree info" [] {
-  let worktrees = git worktree list --porcelain | str trim
-  let entries = $worktrees | split row --regex '(\r?\n){2}'
-
-  if ($entries | is-empty) {
-    print "No worktrees found."
-    return
-  }
-
-  let repo_folder = repo-folder
-  let parent_folder = if ($repo_folder | is-not-empty) {
-    $repo_folder | path dirname
-  }
-
-  $entries | each { |entry|
-    let lines = $entry | lines
-    let full_path = $lines | get 0 | str replace --regex '^worktree ' ''
-    let relative_path = if (($parent_folder | is-not-empty) and ($full_path | is-not-empty)) {
-      $full_path | path relative-to $parent_folder
-    } else {
-      $full_path
-    }
-
-    {
-      Branch: (if ($lines.2 | str starts-with 'branch ') {
-        $lines.2 | str replace --regex '^branch refs/heads/' ''
-      } else {
-        '(detached)'
-      })
-      RelativePath: $relative_path
-      Path: $full_path
-      CommitShort: ($lines.1 | str replace --regex '^HEAD ' '' | str substring 0..7)
-      Commit: ($lines.1 | str replace --regex '^HEAD ' '')
-    }
-  }
 }
