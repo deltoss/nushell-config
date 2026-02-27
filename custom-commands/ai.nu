@@ -90,3 +90,43 @@ export def macro --wrapped [...rest] {
   let macro = (^aichat --list-macros | fzf --header "Macros" | str trim)
   ^aichat --macro $macro ...$rest
 }
+
+export def "suggest commit" [
+  --session: string = ""
+] {
+  let session_name = if $session == "" {
+    $"code-suggest-commit-message-(date now | format date '%Y-%m-%d-%H%M')"
+  } else {
+    $session
+  }
+
+  print $"Session name: ($session_name)"
+
+  let initial_prompt = "I will give you the git diffs, then I will ask you to generate me a short, concise & relevant commit message."
+  ^aichat -s $session_name $initial_prompt
+
+  let selected_files = (
+    ^git status --porcelain
+    | fzf -m --header "Select multiple with [TAB] and [SHIFT-TAB]"
+    | lines
+    | str substring 3.. # Extract filename by removing the first 3 characters (status code + space)
+  )
+
+  if ($selected_files | is-empty) {
+    print "No selection made..."
+    return
+  }
+
+  let diff_prompt = (
+    $selected_files
+    | each {|file|
+        let diff = (^git --no-pager diff --word-diff=porcelain --no-color --no-ext-diff HEAD -- $file)
+        $"Here's the git diff for the file '($file)':\n($diff)"
+      }
+    | str join "\n"
+  )
+
+  let final_prompt = $"($diff_prompt)\n\n... Now give me the final commit message. Make it short and sweet, with at most 80 characters for the main message, and at most a few lines for the description."
+
+  ^aichat --session $session_name $final_prompt
+}
