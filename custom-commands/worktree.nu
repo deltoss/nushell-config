@@ -1,6 +1,36 @@
 use ./git-helpers.nu [repo-folder, worktrees-folder]
 use ./git.nu ['select branch']
 
+export def --env main [] {
+  menu
+}
+
+# Bring up interactive git menu for custom git operations
+export def --env menu [] {
+  print $"(ansi bo)(ansi cyan)l(ansi bl) ⟶ (ansi reset)[(ansi bo)L(ansi reset)]ist worktrees"
+  print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)[(ansi bo)C(ansi reset)]hange"
+  print $"(ansi bo)(ansi cyan)a(ansi bl) ⟶ (ansi reset)[(ansi bo)A(ansi reset)]dd"
+  print $"(ansi bo)(ansi cyan)r(ansi bl) ⟶ (ansi reset)[(ansi bo)R(ansi reset)]emove"
+
+  mut result = ''
+  loop {
+    let key = (input listen --types [key])
+    match [$key.code $key.modifiers] {
+      ['l', []] => { $result = list; break }
+      ['c', []] => { $result = change; break }
+      ['a', []] => { $result = add; break }
+      ['r', []] => { $result = remove; break }
+      ['q', []] => { break }
+      ['c', [keymodifiers(control)]] => { print 'Terminated with Ctrl-C'; break }
+      _ => {
+        print "That key wasn't recognized."
+      }
+    }
+  }
+
+  $result
+}
+
 # List git worktrees
 export def list [] {
   let output = git worktree list --porcelain | str trim
@@ -66,14 +96,14 @@ export def select [] {
 }
 
 # Switch to the directory of a git worktree
-export def --env switch [] {
+export def --env change [] {
   let chosen_worktree = select
   if ($chosen_worktree | is-empty) {
     return
   }
 
   cd $chosen_worktree.path
-  print $"(ansi green)Switched to worktree: ($chosen_worktree.path)(ansi reset)"
+  print $"(ansi green)Changed to worktree: ($chosen_worktree.path)(ansi reset)"
 }
 
 # Adds a git worktree and change to its directory
