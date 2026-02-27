@@ -21,7 +21,7 @@ export def --env menu [] {
       ['a', []] => { $result = add; break }
       ['r', []] => { $result = remove; break }
       ['q', []] => { break }
-      ['c', [keymodifiers(control)]] => { print 'Terminated with Ctrl-C'; break }
+      ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
       _ => {
         print "That key wasn't recognized."
       }
