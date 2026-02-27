@@ -69,11 +69,11 @@ export def list [] {
     }
 
     {
-      path: $full_path
-      relative_path: $relative_path
-      commit: $commit
-      commit_short: ($commit | str substring 0..7)
       branch: $branch
+      relative_path: $relative_path
+      path: $full_path
+      commit_short: ($commit | str substring 0..7)
+      commit: $commit
     }
   }
 }
