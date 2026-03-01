@@ -7,11 +7,11 @@ export def "parse fzf" [--code] {
   {
     query: $interaction.0
     selections: (if ($code | is-not-empty) {
-        $interaction | skip 1 | each {|it|
-          $it | split column ":" --number 4 path start end content | insert raw $it | first
-        }
-      } else {
-        ($interaction | skip 1)
-      })
+      $interaction | skip 1 | each {|it|
+        $it | split column ":" --number 4 path start end content | insert raw $it | first
+      }
+    } else {
+      ($interaction | skip 1)
+    })
   }
 }
