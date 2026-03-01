@@ -1,6 +1,6 @@
 use ./git-helpers.nu [repo-folder repo-info parse-git-url]
 
-# Bring up interactive git menu for custom git operations
+# Bring up interactive menu for custom git operations
 export def menu [] {
   print $"(ansi bo)(ansi cyan)b(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)B(ansi reset)]ranch"
   print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)C(ansi reset)]ommit"
