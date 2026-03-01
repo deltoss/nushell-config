@@ -11,6 +11,7 @@ export def --env menu [] {
   print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)[(ansi bo)C(ansi reset)]hange"
   print $"(ansi bo)(ansi cyan)a(ansi bl) ⟶ (ansi reset)[(ansi bo)A(ansi reset)]dd"
   print $"(ansi bo)(ansi cyan)r(ansi bl) ⟶ (ansi reset)[(ansi bo)R(ansi reset)]emove"
+  print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
 
   mut result = ''
   loop {
