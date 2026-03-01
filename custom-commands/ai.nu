@@ -24,6 +24,7 @@ export def menu [] {
       ['d', []] => { review diffs; break }
       ['S', []] => { review structure; break }
       ['q', []] => { break }
+      ['esc', []] => { break }
       ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
       _ => {
         print "That key wasn't recognized."

@@ -27,6 +27,7 @@ export def menu [] {
       ['p', []] => { commandline edit  --accept --replace "pr"; break }
       ['w', []] => { commandline edit  --accept --replace "worktree"; break }
       ['q', []] => { break }
+      ['esc', []] => { break }
       ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
       _ => {
         print "That key wasn't recognized."
