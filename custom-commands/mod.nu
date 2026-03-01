@@ -5,3 +5,4 @@ export module ./ticket.nu
 export module ./pr.nu
 export module ./kill.nu
 export module ./ai.nu
+export module ./dotnet.nu
