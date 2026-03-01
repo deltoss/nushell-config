@@ -25,6 +25,18 @@ $env.config.keybindings ++= [{
   event: { send: menu name: help_menu }
 }
 {
+  name: search_menu
+  modifier: CONTROL
+  keycode: Char_s
+  mode: [emacs vi_insert vi_normal]
+  event: [
+    {
+      send: executehostcommand,
+      cmd: "print ''; search menu"
+    }
+  ]
+}
+{
   name: ai_menu
   modifier: CONTROL
   keycode: Char_a
