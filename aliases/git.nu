@@ -36,18 +36,20 @@ export alias gf = git fetch --all --prune
 
 export alias gg = ^lazygit
 
-export alias gl = ^git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p"
-export alias gtoday = git log --since='midnight' --oneline $"--author=(git config get 'user.name')"
+export alias gi = git init
+
+export alias gl = git log # Note this purposely calls the internal command git log that formats git log to be more human readable
+export alias gtoday = ^git log --since='midnight' --oneline $"--author=(git config get 'user.name')"
 
 export alias gm = git merge -X ignore-cr-at-eol
 
 export alias gmt = git mergetool
 export alias gma = git merge --abort
 
-export alias gp = git push
-export alias gpf = git push --force-with-lease
-export alias gpf! = git push --force
-export alias gpl = git pull
+export alias gP = git push
+export alias gP! = git push --force-with-lease
+export alias gP!! = git push --force
+export alias gp = git pull
 
 export alias grb = git rebase --interactive
 
