@@ -24,5 +24,7 @@ use ./custom-commands/ *
 
 source ./sourced/sourced.nu
 
+source ./aliases/aliases.nu
+
 # For preview of themes, see https://github.com/nushell/nu_scripts/blob/main/themes/screenshots/README.md
 source ./nu_scripts/themes/nu-themes/atelier-cave-light.nu
