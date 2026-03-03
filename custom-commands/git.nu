@@ -99,8 +99,8 @@ export def log --wrapped [
 ] {
   let $args = [
     '--graph',
-    '--pretty=format:%C(yellow)%h%Creset %C(green)%ad%Creset %C(bold blue)%an%Creset %C(red)%d%Creset %s %C(dim white)%b%Creset',
-    '--date=short',
+    '--pretty=format:%C(yellow)%h%Creset %C(green)%ad%Creset %C(bold blue)%an%Creset %C(auto)%d%n%Creset%s%C(dim white)%b%Creset%n',
+    '--date=human',
     '--color',
     ...$rest
   ]
@@ -116,7 +116,7 @@ export def "log table" --wrapped [
   let $args = [
     '-n',
     '100',
-    "--pretty=format:%C(yellow)%h%Creset»¦«%aD»¦«%C(bold blue)%an%Creset»¦«%C(red)%d%Creset»¦«%s\n%C(dim white)%b%Creset¦¦¦",
+    "--pretty=format:%C(yellow)%h%Creset»¦«%aD»¦«%C(bold blue)%an%Creset»¦«%C(auto)%d%Creset»¦«%s%n%C(dim white)%b%Creset¦¦¦",
     '--color',
     ...$rest
   ]
