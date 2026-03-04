@@ -26,7 +26,7 @@ export def --wrapped devenv [...rest] {
 export def --wrapped "devenv solution" [...rest] {
   let query = $in | default ''
   let interaction = glob "**/*.sln" | str join "\n" | fzf --multi --header='Search - .NET Solution' --print-query --query $query | parse fzf
-  if ($interaction | is-empty) or ($interaction | get selections | is-empty) {
+  if ($interaction | get --optional selections | is-empty) {
     return
   }
   devenv ($interaction | get selections.0)
