@@ -4,6 +4,7 @@ source ./zoxide.nu
 source ./intelli-shell.nu
 source ./aichat/aichat.nu
 source ./starship.nu
+source ./git-wt.nu
 use ./yazi.nu *
 use ./nvim.nu *
 use ./opencode.nu *
