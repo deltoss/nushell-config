@@ -1,13 +1,14 @@
 use ../tools/visual-studio.nu [devenv]
 use ./fzf-helpers.nu ['parse fzf']
+use ./run.nu
 
 # Search for items
-export def main []: nothing -> nothing {
+export def --env main []: nothing -> nothing {
   menu
 }
 
 # Bring up interactive menu for search operations
-export def menu []: nothing -> nothing {
+export def --env menu []: nothing -> nothing {
   print $"(ansi bo)(ansi cyan)e(ansi bl) ⟶ (ansi reset)[(ansi bo)E(ansi reset)]verything"
   print $"(ansi bo)(ansi cyan)f(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]iles"
   print $"(ansi bo)(ansi cyan)F(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]iles in git repository"
@@ -38,7 +39,7 @@ export def menu []: nothing -> nothing {
   }
 
   if ($result | is-not-empty) {
-    $result.selections | first | nvim $in
+    $result.selections | run
   }
 }
 
