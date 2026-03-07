@@ -25,18 +25,18 @@ export def --env menu []: string -> nothing, list<string> -> nothing {
   }
   let first_selection = $selections | first
 
-  print "=== Open With ==="
+  print $"(ansi bo)(ansi blue)=== Open With ===(ansi reset)"
   if (commandline | is-not-empty) {
     print $"(ansi bo)(ansi cyan)p(ansi bl) ⟶ (ansi reset)[(ansi bo)P(ansi reset)]rompt"
   }
   print ''
 
-  print "== Programs =="
+  print $"(ansi bo)(ansi cyan)== Programs ==(ansi reset)"
   print $"(ansi bo)(ansi cyan)n(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]eovim"
   print $"(ansi bo)(ansi cyan)v(ansi bl) ⟶ (ansi reset)[(ansi bo)V(ansi reset)]isual Studio IDE"
   print ''
 
-  print "== Folder =="
+  print $"(ansi bo)(ansi cyan)== Folder ==(ansi reset)"
   print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)[(ansi bo)C(ansi reset)]hange Directory"
   print $"(ansi bo)(ansi cyan)y(ansi bl) ⟶ (ansi reset)[(ansi bo)Y(ansi reset)]azi"
   print $"(ansi bo)(ansi cyan)f(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]ile Explorer"
@@ -47,7 +47,12 @@ export def --env menu []: string -> nothing, list<string> -> nothing {
     match [$key.code $key.modifiers] {
       ['p', []] => { commandline edit --insert $first_selection; break }
       ['n', []] => {
-        ^nvim $first_selection
+        let parts = $first_selection | split column ":" --number 4 path start end content | first
+        if ($parts.start? | is-not-empty) {
+          ^nvim $"+($parts.start)" $parts.path
+        } else {
+          ^nvim $parts.path
+        }
         break
       }
       ['v', []] => {
