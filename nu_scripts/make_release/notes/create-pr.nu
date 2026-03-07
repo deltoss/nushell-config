@@ -37,7 +37,7 @@ export def main [
     version: string@"nu-complete version" # the version of the release
     date: datetime@"nu-complete date next" # the date of the upcoming release
 ] {
-    let repo = ($nu.temp-path | path join (random uuid))
+    let repo = ($nu.temp-dir | path join (random uuid))
     let branch = $"release-notes-($version)"
 
     let blog_path = (
@@ -52,6 +52,7 @@ by opening PRs against the `release-notes-($version)` branch.
 - [ ] add the full changelog
 - [ ] categorize each PR
 - [ ] write all the sections and complete all the `TODO`s
+
 [deprecations]: https://github.com/nushell/nushell/labels/deprecation
 [removals]: https://github.com/nushell/nushell/pulls?q=is%3Apr+is%3Aopen+label%3Aremoval-after-deprecation"
 
@@ -70,7 +71,7 @@ by opening PRs against the `release-notes-($version)` branch.
                 }
             }
 
-            let temp_file = $nu.temp-path | path join $"(random uuid).md"
+            let temp_file = $nu.temp-dir | path join $"(random uuid).md"
             [
                 "<!-- WARNING: Changes made to this file are NOT included in the PR -->"
                 ""
@@ -91,8 +92,7 @@ by opening PRs against the `release-notes-($version)` branch.
     }
 
     log info "setting up nushell.github.io repo"
-    ^git clone https://github.com/nushell/nushell.github.io $repo --origin nushell --branch main --single-branch
-    ^git -C $repo remote set-url nushell --push git@github.com:nushell/nushell.github.io.git
+    ^gh repo clone nushell/nushell.github.io $repo -- --origin nushell --branch main --single-branch --depth 1
 
     log info "creating release branch"
     ^git -C $repo checkout -b $branch
