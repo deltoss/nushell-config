@@ -21,7 +21,16 @@ use util.nu *
 export def get-release-notes []: record -> record {
     mut pr = $in
 
+    # Do not throw any warnings for hidden PRs
+    let has_hide_label = "notes:hide" in $pr.labels.name
+    let hidden = $SECTIONS | where label == "notes:hide" | only
+    if $has_hide_label {
+        $pr = ($pr | add-notice info "appearance only in full changelog")
+        return ($pr | insert section $hidden)
+    }
+
     let has_ready_label = "notes:ready" in $pr.labels.name
+    let has_hall_of_fame_label = "notes:mention" in $pr.labels.name
     let sections = $SECTIONS | where label in $pr.labels.name
     let hall_of_fame = $SECTIONS | where label == "notes:mention" | only
 
@@ -30,7 +39,10 @@ export def get-release-notes []: record -> record {
       $pr.body | extract-notes
     } else if $has_ready_label {
       # If no release notes summary exists but ready label is set, treat as empty
-      $pr = $pr | add-notice warning "no release notes section but notes:ready label"
+      if not $has_hall_of_fame_label {
+        # Hall of fame does not need release notes section necessarily
+        $pr = $pr | add-notice warning "no release notes section but notes:ready label"
+      }
       ""
     } else {
       return ($pr | add-notice error "no release notes section")
@@ -77,7 +89,7 @@ export def get-release-notes []: record -> record {
     # Add PR title as default heading for multi-line summaries
     if $lines > 1 and not ($notes starts-with "###") {
         $pr = $pr | add-notice info "multi-line summaries with no explicit title (using PR title as heading title)"
-        $notes = "### " + ($pr.title | clean-title) ++ (char nl) ++ $notes
+        $notes = "### " + ($pr.title | clean-title) ++ (char nl) ++ (char nl) ++ $notes
     }
 
     # Check for suspiciously short release notes section
@@ -96,10 +108,9 @@ export def extract-notes []: string -> string {
     # this should already have been checked
     | if ($in | is-empty) { assert false } else {}
     | skip 1 # remove header
-    # extract until next heading
-    | take until {
-          $in starts-with "# " or $in starts-with "## " or $in starts-with "---"
-      }
+    # extract until end of summary
+    | reduce -f {code: false, done: false, out: []} (extract_until_end)
+    | get out
     | str join (char nl)
     # remove HTML comments
     | str replace -amr '<!--\O*?-->' ''
@@ -145,18 +156,36 @@ export def generate-section []: record<section: string, prs: table> -> string {
     let bullet = $prs | where ($it.notes | lines | length) == 1
 
     # Add header
-    $body ++= [$"## ($section.h2)"]
+    $body ++= [$"## ($section.h2) <JumpToc/>\n"]
 
     # Add multi-line summaries
-    $body ++= $multiline.notes
+    $body ++= $multiline | generate-multiline-notes
 
     # Add single-line summaries
-    if ($multiline | is-not-empty) {
-        $body ++= [$"### ($section.h3)"]
+    if ($multiline | is-not-empty) and ($bullet | is-not-empty) {
+        $body ++= [$"### ($section.h3) <JumpToc/>\n"]
     }
     $body ++= $bullet | each {|pr| "* " ++ $pr.notes ++ $" \(($pr | pr-link)\)" }
 
-    $body | str join (char nl)
+    ($body | str join (char nl)) ++ (char nl)
+}
+
+def generate-multiline-notes []: table -> list {
+    $in | each {|pr|
+        let number = $pr.number
+        let author = $pr.author.login
+
+        let pr_by_tag = $'<PrBy :pr="($number)" user="($author)" />'
+        let replacer = $"### $1 <JumpToc/> ($pr_by_tag)\n"
+        let matcher = "^### ([^\n]*)\n"
+        let updated = ($pr.notes | str replace --all --regex $matcher $replacer)
+
+        if ($updated | str ends-with "\n") { 
+            $updated 
+        } else { 
+            $updated ++ (char nl) 
+        }
+    }
 }
 
 # Generate the "Hall of Fame" section of the release notes.
@@ -176,6 +205,31 @@ export def generate-hall-of-fame []: table -> string {
 export def generate-full-changelog [version: string]: nothing -> string {
     list-prs --milestone=$version
     | pr-table
+}
+
+# Create closure for `reduce` to extract the whole release notes summary.
+def extract_until_end []: nothing -> closure {
+    let terminators = ["# " "## " "---"]
+    {|line: string, state: record|
+        mut state = $state
+
+        if $state.done { return $state }
+
+        # check if we're entering/exiting a code block
+        # this might be kind of brittle
+        if $line has "```" {
+            $state.code = not $state.code
+        }
+
+        let found_terminator = $terminators | any { $line starts-with $in }
+        if $found_terminator and not $state.code {
+            $state.done = true
+            return $state
+        }
+
+        $state.out ++= [$line]
+        $state
+    }
 }
 
 # Get section labels which don't have a corresponding heading (i.e., don't appear in Changes section)
