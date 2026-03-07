@@ -39,6 +39,7 @@ export def --env menu []: nothing -> nothing {
   }
 
   if ($result | is-not-empty) {
+    print ''
     $result.selections | run
   }
 }
