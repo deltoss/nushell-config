@@ -45,11 +45,16 @@ def query-prs [
 
     let query = $query_parts | str join ' '
 
-    (gh --repo $repo pr list --state merged
-        --limit (inf | into int)
-        --json author,title,number,mergedAt,url,body,labels
-        --search $query)
-    | from json
+    let results = (
+        gh --repo $repo pr list --state merged
+            --limit (inf | into int)
+            --json author,title,number,mergedAt,url,body,labels
+            --search $query
+        | from json
+    )
+
+    assert ($results | is-not-empty) "Query returned no results"
+    $results
 }
 
 # Generate the release notes for the specified version.
@@ -60,7 +65,7 @@ export def release-notes [
     | where not author.is_bot
     | sort-by mergedAt
     | each { get-release-notes }
-    | tee { display-notices }
+    | tee { format-notices }
     | where {|pr| "error" not-in ($pr.notices?.type? | default []) }
     | generate-notes $version
 }
@@ -70,14 +75,14 @@ export def check-prs [
     version: string@"nu-complete version" # the version to generate release notes for
     --as-table (-t) # output PR checks as a table
 ]: [
-    nothing -> nothing,
+    nothing -> string,
     nothing -> table
 ] {
     query-prs --milestone=$version
     | where not author.is_bot
     | sort-by mergedAt
     | each { get-release-notes }
-    | if $as_table { group-notices } else { display-notices }
+    | if $as_table { group-notices } else { format-notices }
 }
 
 # Format the output of `list-prs` as a markdown table
@@ -88,95 +93,4 @@ export def pr-table [] {
     | select author title link
     | to md
     | escape-tag
-}
-
-const toc = '[[toc](#table-of-contents)]'
-
-# Generate and write the table of contents to a release notes file
-export def write-toc [file: path] {
-    let known_h1s = [
-        "# Highlights and themes of this release",
-        "# Changes",
-        "# Notes for plugin developers",
-        "# Hall of fame",
-        "# Full changelog",
-    ]
-
-    let lines = open $file | lines | each { str trim -r }
-
-    let content_start = 2 + (
-        $lines
-        | enumerate
-        | where item == '# Table of contents'
-        | first
-        | get index
-    )
-
-    let data = (
-        $lines
-        | slice $content_start..
-        | wrap line
-        | insert level {
-            get line | split chars | take while { $in == '#' } | length
-        }
-        | insert nocomment {
-            # We assume that comments only have one `#`
-            if ($in.level != 1) {
-                return true
-            }
-            let line = $in.line
-
-            # Try to use the whitelist first
-            if ($known_h1s | any {|| $line =~ $in}) {
-                return true
-            }
-
-            # We don't know so let's ask
-            let user = ([Ignore Accept] |
-                input list $"Is this a code comment or a markdown h1 heading:(char nl)(ansi blue)($line)(ansi reset)(char nl)Choose if we include it in the TOC!")
-            match $user {
-                "Accept" => {true}
-                "Ignore" => {false}
-            }
-
-        }
-    )
-
-    let table_of_contents = (
-        $data
-        | where level in 1..=3 and nocomment == true
-        | each {|header|
-            let indent = '- ' | fill -w ($header.level * 2) -a right
-
-            let text = $header.line | str trim -l -c '#' | str trim -l
-            let text = if $text ends-with $toc {
-                $text | str substring ..<(-1 * ($toc | str length)) | str trim -r
-            } else {
-                $text
-            }
-
-            let link = (
-                $text
-                | str downcase
-                | str kebab-case
-            )
-
-            $"($indent)[_($text)_]\(#($link)-toc\)"
-        }
-    )
-
-    let content = $data | each {
-        if $in.level in 1..=3 and not ($in.line ends-with $toc) and $in.nocomment {
-            $'($in.line) ($toc)'
-        } else {
-            $in.line
-        }
-    }
-
-    [
-        ...($lines | slice ..<$content_start)
-        ...$table_of_contents
-        ...$content
-    ]
-    | save -r -f $file
 }
