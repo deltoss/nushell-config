@@ -26,7 +26,8 @@ $env.config.shell_integration.osc7 = true
 $env.config.datetime_format.normal = "%d/%m/%y %I:%M:%S%p"
 
 # Display output tables with more information
-$env.config.hooks.display_output = { table -e }
+# Also stores the output (if any) into an environment variable
+$env.config.hooks.display_output = { tee { table -e | print } | $env.LAST = $in }
 
 let env_file = ($nu.default-config-dir | path join ".env.json")
 let vars = if ($env_file | path exists) { open $env_file } else { {} }
