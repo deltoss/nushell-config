@@ -1,3 +1,7 @@
+if $nu.os-info.name == "linux" {
+  $env.PATH ++= ["/opt/nvim-linux-x86_64/bin"] # For Neovim installation
+}
+
 $env.XDG_CONFIG_HOME = "~/.config" | path expand
 $env.EDITOR = "nvim"
 # Custom environment variable used within nvim & shell scripts to start OpenCode CLI
