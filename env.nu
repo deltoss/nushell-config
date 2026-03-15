@@ -1,5 +1,8 @@
 if $nu.os-info.name == "linux" {
-  $env.PATH ++= ["/opt/nvim-linux-x86_64/bin"] # For Neovim installation
+  $env.PATH ++= [
+    "/opt/nvim-linux-x86_64/bin" # For Neovim installation
+    $"($env.HOME)/.local/bin"
+  ]
 }
 
 $env.XDG_CONFIG_HOME = "~/.config" | path expand
