@@ -2,9 +2,18 @@
 
 ## Getting Started
 
+### Bash
+
 ```bash
 rm -rf ~/.config/nushell
 git clone git@github.com:deltoss/nushell-config.git ~/.config/nushell
+```
+
+### Powershell
+
+```powershell
+rm -Recurse ~/.config/nushell
+git clone git@github.com:deltoss/nushell-config.git $env:USERPROFILE/.config/nushell
 ```
 
 ## Subtrees
