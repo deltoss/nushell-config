@@ -18,7 +18,7 @@ export def --env menu []: nothing -> nothing {
   print $"(ansi bo)(ansi cyan)N(ansi bl) ⟶ .(ansi reset)[(ansi bo)N(ansi reset)]ET"
   print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
 
-  mut result = ''
+  mut result = {}
   loop {
     let key = (input listen --types [key])
     match [$key.code $key.modifiers] {
@@ -46,7 +46,7 @@ export def --env menu []: nothing -> nothing {
 
 # Search for everything on your PC
 @example "With piped query" { ".json" | search everything }
-export def everything []: string -> path, nothing -> path {
+export def everything []: string -> record, nothing -> record {
   let query = $in
   let search_template = match $nu.os-info.name {
     "windows" => "es count:100 -p -r {q:1} -r {q:2} -r {q:3} -r {q:4} -r {q:5} -r {q:6} -r {q:7} -r {q:8} -r {q:9}"
@@ -56,7 +56,7 @@ export def everything []: string -> path, nothing -> path {
     error make { msg: $"This search is not supported for your OS: ($nu.os-info.name)" }
   }
   if ($query | is-not-empty) {
-    return (fzf --bind $"start:reload:($search_template)" --bind $"change:reload-sync\(sleep 100ms; ($search_template)\)" --print-query --query $query --header="Search - Everything") | parse fzf
+    return (fzf --bind $"start:reload:($search_template)" --bind $"change:reload-sync\(sleep 100ms; ($search_template)\)" --print-query --query $query --header="Search - Everything" | parse fzf)
   }
 
   # Pipe null to disable the initial unnecessary search upon entering fzf
@@ -66,7 +66,7 @@ export def everything []: string -> path, nothing -> path {
 
 # Search for files from cwd
 @example "With piped query" { ".sln" | search files }
-export def files []: string -> path, nothing -> path {
+export def files []: string -> record, nothing -> record {
   let query = $in
   let results = if ($query | is-not-empty) {
     fd $query
@@ -77,7 +77,7 @@ export def files []: string -> path, nothing -> path {
 }
 
 # Search for .NET solutions on your PC
-export def ".net" []: string -> any, nothing -> any {
+export def ".net" []: string -> record, nothing -> record {
   let query = $in | default ''
   let results = match $nu.os-info.name {
     "windows" => {
@@ -93,13 +93,13 @@ export def ".net" []: string -> any, nothing -> any {
 }
 
 # Search for notes on your PC
-export def "notes" []: string -> any, nothing -> any {
+export def "notes" []: string -> record, nothing -> record {
   let query = $in | default ''
   fd . ("~/Documents/Note Taking" | path expand) ("~/Documents/Org Notes" | path expand) | fzf --header="Search - Obsidian Notes" --print-query --query $query --preview $env.FZF_CUSTOM_PREVIEW | parse fzf
 }
 
 # Search for file content in current directory
-export def "grep" []: string -> any, nothing -> any {
+export def "grep" []: string -> record, nothing -> record {
   let query = $in | default ''
   let rg_prefix = "rg --column --line-number --no-heading --color=always --smart-case"
 
@@ -113,7 +113,7 @@ export def "grep" []: string -> any, nothing -> any {
 }
 
 # Search for git repositories on your PC
-export def "repositories" []: string -> any, nothing -> any {
+export def "repositories" []: string -> record, nothing -> record {
   let query = $in | default ''
   let results = match $nu.os-info.name {
     "windows" => {

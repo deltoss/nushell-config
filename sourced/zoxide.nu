@@ -10,7 +10,10 @@ def --env z [...args] {
   let result = zoxide query ...$args | complete
 
   if ($result.exit_code != 0) {
-    cd ($query | search everything)
+    let selection = ($query | search everything) | get --optional selections.0
+    if ($selection | is-not-empty) {
+      cd $selection
+    }
   } else {
     cd ($result.stdout | str trim)
   }
