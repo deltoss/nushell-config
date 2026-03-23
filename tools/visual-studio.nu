@@ -1,5 +1,19 @@
 use "../custom-commands/fzf-helpers.nu" ['parse fzf']
 
+def run-detached [cmd, ...rest] {
+  let os = $nu.os-info.name
+
+  if $os == "windows" {
+    let arg_list = ($rest | each { |a| $'"`"($a)`""' } | str join ',')
+    let command = $"Start-Process -FilePath '($cmd)' -ArgumentList ($arg_list)";
+    # print $arg_list
+    # print $command
+    ^powershell -NoProfile -NoLogo -Command $command
+  } else {
+    print "Not supported to run on any OS aside from Windows"
+  }
+}
+
 # Sample usage:
 #   devenv MySolution.sln
 #   devenv MySolution.sln /build "Debug|Any CPU"
@@ -16,7 +30,7 @@ export def --wrapped devenv [...rest] {
 
   if ($vsPath | is-not-empty) {
     let devenvPath = ($vsPath | path join "Common7" "IDE" "devenv.exe")
-    job spawn { ^$devenvPath ...$rest } | ignore
+    run-detached $devenvPath ...$rest
   } else {
     error make { msg: "No Visual Studio installation found" }
   }
