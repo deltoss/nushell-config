@@ -15,7 +15,7 @@
 # Note: nushell's completion engine bypasses custom completers when the current
 # token starts with `-`, so flag completions (e.g. `wt switch --<TAB>`) don't
 # appear. Subcommand and value completions work. (nushell/nushell#14504)
-def "nu-complete git-wt" [context: string] {
+export def "nu-complete git-wt" [context: string] {
     let worktrunk_bin = if ($env.WORKTRUNK_BIN? | is-not-empty) {
         $env.WORKTRUNK_BIN
     } else {
@@ -76,7 +76,7 @@ def "nu-complete git-wt" [context: string] {
 #   Stderr flows to the terminal in real-time. The binary sees non-TTY stdout
 #   and uses buffered mode, but commands other than `list` don't benefit from
 #   progressive rendering anyway.
-def --env --wrapped git-wt [...args: string@"nu-complete git-wt"] {
+export def --env --wrapped git-wt [...args: string@"nu-complete git-wt"] {
     let worktrunk_bin = if ($env.WORKTRUNK_BIN? | is-not-empty) {
         $env.WORKTRUNK_BIN
     } else {
