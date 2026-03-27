@@ -5,10 +5,9 @@ export-env {
 }
 
 job spawn {
-  zoxide init nushell | save -f ~/.zoxide.nu
+  mkdir ($nu.data-dir | path join "vendor/autoload")
+  zoxide init nushell | save -f ($nu.data-dir | path join "vendor/autoload/zoxide.nu")
 }
-
-source ~/.zoxide.nu
 
 # Overrides z command that uses the custom command `search everything`
 # if the queried common directory doesn't exist in zoxide
