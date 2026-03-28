@@ -13,6 +13,7 @@ use ../nu_scripts/custom-completions/dotnet/dotnet-completions.nu *
 use ../nu_scripts/custom-completions/op/op-completions.nu *
 use ../nu_scripts/custom-completions/bitwarden-cli/bitwarden-cli-completions.nu *
 use ../nu_scripts/custom-completions/aws/aws-completions.nu *
+use ../nu_scripts/custom-completions/claude/claude-completions.nu *
 use ./yazi-completions.nu *
 use ./ya-completions.nu *
 
