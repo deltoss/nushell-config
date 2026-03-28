@@ -13,3 +13,4 @@ use ./1password.nu *
 use ./ripgrep.nu *
 use ./bat.nu *
 use ./visual-studio.nu *
+use ../nu_scripts/modules/aws/select-aws-profile.nu *
