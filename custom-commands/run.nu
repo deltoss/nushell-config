@@ -48,10 +48,10 @@ export def --env menu []: string -> nothing, list<string> -> nothing {
       ['p', []] => { commandline edit --insert $first_selection; break }
       ['n', []] => {
         let parts = $first_selection | split column ":" --number 4 path start end content | first
-        if ($parts.start? | is-not-empty) {
+        if ($parts.content? | is-not-empty) {
           ^nvim $"+($parts.start)" $parts.path
         } else {
-          ^nvim $parts.path
+          ^nvim $first_selection
         }
         break
       }
