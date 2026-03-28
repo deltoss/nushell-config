@@ -1,6 +1,6 @@
 export-env {
   $env.FZF_DEFAULT_COMMAND = 'fd --type f'
-  $env.FZF_DEFAULT_OPTS = '--height 40% --layout=reverse --border --with-shell "nu -c"'
+  $env.FZF_DEFAULT_OPTS = '--style full --height 40% --layout=reverse --border --with-shell "nu -c"'
   $env.FZF_CUSTOM_PREVIEW = 'if ({} | path type) == "dir" { eza --tree --level=1 --colour=always --icons=always {} } else { bat --color=always --style=numbers --line-range=:500 {} }'
 }
 
@@ -8,11 +8,13 @@ export-env {
 # Examples
 #   ps | fzf
 #   ps | fzf --columns [name] --multi
+#   ps | fzf --format {|it| $"($it.name) - ($it.pid)" }
 #   { "name": "John", "surname": "Doe" } | fzf
 #   ["option1" "option2"] | fzf
 export def --wrapped fzf [
   # Columns to display for fzf interaction
   --columns: list<string>,
+  --format: closure
   ...rest
 ]: [
   string -> string
@@ -35,7 +37,7 @@ export def --wrapped fzf [
   } else if $kind =~ '^record' {
     $data | fzf record ...$rest
   } else if $kind =~ '^table' {
-    $data | fzf table --columns $columns ...$rest
+    $data | fzf table --columns $columns --format $format ...$rest
   } else {
     $data | ^fzf ...$rest
   }
@@ -69,6 +71,8 @@ export def "fzf record" [
 export def --wrapped "fzf table" [
   # Columns to display for fzf interaction
   --columns: list<string>,
+  # Controls how to render the table items on fzf entry
+  --format: closure
   ...rest
 ]: [
   table -> record
@@ -76,16 +80,17 @@ export def --wrapped "fzf table" [
   table -> table
 ] {
   let data = $in
-  let display = if ($columns | is-empty) {
-    $data
+  let display = if ($format | is-not-empty) {
+    $data | each $format | str join "\n"
+  } else if ($columns | is-not-empty) {
+    $data | select ...$columns | to tsv
   } else {
-    $data | select ...$columns
+    $data | to tsv
   }
 
   let is_multi = $rest | any { |it| $it == "--multi" or $it == "-m" }
 
   let selected_indices = $display
-    | to tsv
     # --accept-nth={n} gets the index of the selection
     | ^fzf --header-lines=1 --accept-nth={n} ...$rest
     | lines
