@@ -4,8 +4,14 @@ export-env {
   $env.FZF_CUSTOM_PREVIEW = 'if ({} | path type) == "dir" { eza --tree --level=1 --colour=always --icons=always {} } else { bat --color=always --style=numbers --line-range=:500 {} }'
 }
 
-# Wraps fzf to handle nushell tabular data
+# Wraps fzf to handle nushell structured data such as tables, lists or records
+# Examples
+#   ps | fzf
+#   ps | fzf --columns [name] --multi
+#   { "name": "John", "surname": "Doe" } | fzf
+#   ["option1" "option2"] | fzf
 export def --wrapped fzf [
+  # Columns to display for fzf interaction
   --columns: list<string>,
   ...rest
 ]: [
@@ -15,8 +21,13 @@ export def --wrapped fzf [
   table -> record
   # If --multi flag is used
   table -> table
+  nothing -> any
 ] {
-  let data = $in
+  let data = ($in | default null)
+  if ($data | is-empty) {
+    return (^fzf ...$rest)
+  }
+
   let kind = ($data | describe)
 
   if $kind =~ '^list<string>' {
