@@ -5,6 +5,9 @@ if $nu.os-info.name == "linux" {
   ]
 }
 
+if $nu.os-info.name == "windows" {
+  $env.HOME = $env.USERPROFILE | str replace "\\" "/" --all
+}
 $env.XDG_CONFIG_HOME = "~/.config" | path expand
 $env.EDITOR = "nvim"
 # Custom environment variable used within nvim & shell scripts to start OpenCode CLI
