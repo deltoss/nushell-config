@@ -5,12 +5,11 @@ export-env {
 }
 
 # Wraps fzf to handle nushell structured data such as tables, lists or records
-# Examples
-#   ps | fzf
-#   ps | fzf --columns [name] --multi
-#   ps | fzf --format {|it| $"($it.name) - ($it.pid)" }
-#   { "name": "John", "surname": "Doe" } | fzf
-#   ["option1" "option2"] | fzf
+@example "Select a value from a list" { ["option1" "option2"] | fzf }
+@example "Select a record from a table" { ps | fzf }
+@example "Select records from a table, displaying just the column name for fzf" { ps | fzf --columns [name] --multi }
+@example "Select a record from a table, providing a custom display format for fzf" { ps | fzf --format {|it| $"($it.name) - ($it.pid)" } }
+@example "Select field-value pair from a record" { { "name": "John", "surname": "Doe" } | fzf }
 export def --wrapped fzf [
   # Columns to display for fzf interaction
   --columns: list<string>,

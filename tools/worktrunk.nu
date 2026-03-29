@@ -45,18 +45,16 @@ export def --env --wrapped wtr [...rest] {
 }
 
 # Create a git worktree and run Claude Code on it
-# Examples:
-#   wtc new-feature                       # Creates worktree, runs hooks, launches Claude
-#   wtc feature -- Fix GH #322          # Runs `claude 'Fix GH #322'`
+@example "Creates worktree, runs hooks & launches Claude Code" { wtc new-feature }
+@example "Runs `claude 'Fix GH #322'`" { wtc feature -- "Fix GH #322" }
 export def --env --wrapped wtc [...rest] {
   wta
   ^claude ($rest | where $it != '--' | str join ' ')
 }
 
 # Create a git worktree and run OpenCode on it
-# Examples:
-#   wto new-feature                       # Creates worktree, runs hooks, launches OpenCode
-#   wto feature -- Fix GH #322          # Runs `opencode 'Fix GH #322'`
+@example "Creates worktree, runs hooks & launches OpenCode" { wt0 new-feature }
+@example "Runs `opencode 'Fix GH #322'`" { wto feature -- "Fix GH #322" }
 export def --env --wrapped wto [...rest] {
   wta
   ^opencode ($rest | where $it != '--' | str join ' ')
