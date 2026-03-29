@@ -16,6 +16,7 @@ use ../nu_scripts/custom-completions/aws/aws-completions.nu *
 use ../nu_scripts/custom-completions/claude/claude-completions.nu *
 use ./yazi-completions.nu *
 use ./ya-completions.nu *
+use ./vultr-cli-completions.nu *
 
 if $nu.os-info.name == "windows" {
   use ../nu_scripts/custom-completions/winget/winget-completions.nu *
