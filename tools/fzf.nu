@@ -79,6 +79,12 @@ export def --wrapped "fzf table" [
   table -> table
 ] {
   let data = $in
+  let header_lines = if ($format | is-not-empty) {
+    0
+  } else {
+    1
+  }
+
   let display = if ($format | is-not-empty) {
     $data | each $format | str join "\n"
   } else if ($columns | is-not-empty) {
@@ -91,15 +97,14 @@ export def --wrapped "fzf table" [
 
   let selected_indices = $display
     # --accept-nth={n} gets the index of the selection
-    | ^fzf --header-lines=1 --accept-nth={n} ...$rest
+    | ^fzf $"--header-lines=($header_lines)" --accept-nth={n} ...$rest
     | lines
 
   if ($selected_indices | is-empty) {
     return
   }
 
-  # -1 with selected index, as fzf index is 1-based instead of being traditionally 0-based
-  let selected_indices = $selected_indices | into int | par-each { $in - 1 }
+  let selected_indices = $selected_indices | into int | par-each { $in - $header_lines }
   let result = $selected_indices | par-each {|idx| $data | get $idx }
 
   if $is_multi {
