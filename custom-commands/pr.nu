@@ -1,15 +1,15 @@
 use std/log
 use ./git-helpers.nu [ repo-info ]
-use ./git.nu [ "select branch" ]
+use ./git.nu
 
-def "get workspaces" [] {
+export def "get workspaces" [] {
   http get --headers {
     accept: application/json
-    authorization:$"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
+    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
   } https://api.bitbucket.org/2.0/user/permissions/workspaces | get values | select workspace.uuid workspace.slug workspace.name | rename id slug name
 }
 
-def "select workspace" [] {
+export def "select workspace" [] {
   let workspaces = get workspaces
   if ($workspaces | is-empty) {
     return
@@ -25,7 +25,7 @@ def "select workspace" [] {
   }
 }
 
-def "get repositories" [
+export def "get repositories" [
   # Workspace name or slug
   workspace?:string
   # Optional query to filter results by repository name
@@ -40,7 +40,7 @@ def "get repositories" [
 
   http get --headers {
     accept: application/json
-    authorization:$"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
+    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
   } $"https://api.bitbucket.org/2.0/repositories/($workspace | url encode)?role=contributor($full_query)" | get values | select name slug
 }
 
@@ -51,7 +51,7 @@ export def url [
   let repo = $repo_info | default { repo-info }
   let src_branch = $repo.branch
   let dest = $dest_branch | default {
-    select-branch | if ($in | is-not-empty) {
+    git select branch | if ($in | is-not-empty) {
       get branch | str replace '^origin\/' ''
     }
   }
