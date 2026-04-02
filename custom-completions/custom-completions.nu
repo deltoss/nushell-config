@@ -9,6 +9,7 @@ use ../nu_scripts/custom-completions/bat/bat-completions.nu *
 use ../nu_scripts/custom-completions/cargo/cargo-completions.nu *
 use ../nu_scripts/custom-completions/npm/npm-completions.nu *
 use ../nu_scripts/custom-completions/docker/docker-completions.nu *
+use ../nu_scripts/custom-completions/podman/podman-completions.nu *
 use ../nu_scripts/custom-completions/dotnet/dotnet-completions.nu *
 use ../nu_scripts/custom-completions/op/op-completions.nu *
 use ../nu_scripts/custom-completions/bitwarden-cli/bitwarden-cli-completions.nu *
