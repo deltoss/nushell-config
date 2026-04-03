@@ -3,6 +3,11 @@ if $nu.os-info.name == "linux" {
     "/opt/nvim-linux-x86_64/bin" # For Neovim installation
     $"($env.HOME)/.local/bin"
   ]
+
+  # Conditionally import cargo's env.nu, only if it exists
+  const path = "~/.cargo/env.nu" 
+  const source = if ($path | path exists) { $path } else { null }
+  source $source
 }
 
 if $nu.os-info.name == "windows" {
