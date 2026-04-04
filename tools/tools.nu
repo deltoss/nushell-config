@@ -10,6 +10,7 @@ use ../nu_scripts/modules/aws/select-aws-profile.nu *
 
 source ./tv.nu
 source ./zoxide.nu
+source ./mise.nu
 source ./intelli-shell.nu
 source ./aichat/aichat.nu
 source ./starship.nu
