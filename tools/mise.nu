@@ -5,4 +5,5 @@ if not ($mise_path | path exists) {
   mkdir $mise_dir_path
   ^mise activate nu | save $mise_path --force
 }
-use $mise_path
+
+use (if ($mise_path | path exists) { $mise_path } else { null })
