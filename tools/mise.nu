@@ -1,4 +1,8 @@
-job spawn {
-  mkdir ($nu.data-dir | path join "vendor/autoload")
-  mise activate nu | save -f ($nu.data-dir | path join "vendor/autoload/mise.nu")
+const mise_dir_path = $nu.data-dir | path join "mise"
+const mise_path = $mise_dir_path | path join "mise.nu"
+
+if not ($mise_path | path exists) {
+  mkdir $mise_dir_path
+  ^mise activate nu | save $mise_path --force
 }
+use $mise_path
