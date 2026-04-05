@@ -8,6 +8,10 @@ use ./bat.nu *
 use ./visual-studio.nu *
 use ../nu_scripts/modules/aws/select-aws-profile.nu *
 
+if $nu.os-info.name == "linux" {
+  use ./blkid.nu *
+}
+
 source ./tv.nu
 source ./zoxide.nu
 source ./mise.nu
