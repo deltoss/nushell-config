@@ -50,6 +50,7 @@ export def everything []: string -> record, nothing -> record {
   let query = $in
   let search_template = match $nu.os-info.name {
     "windows" => "es count:100 -p -r {q:1} -r {q:2} -r {q:3} -r {q:4} -r {q:5} -r {q:6} -r {q:7} -r {q:8} -r {q:9}"
+    "linux" => "locate --ignore-case --limit 100 -r {q:1} {q:2} {q:3} {q:4} {q:5} {q:6} {q:7} {q:8} {q:9}"
     _ => null
   }
   if ($search_template | is-empty) {
@@ -82,6 +83,9 @@ export def ".net" []: string -> record, nothing -> record {
   let results = match $nu.os-info.name {
     "windows" => {
       ^es /a-d -p -r !'\\\$Recycle.Bin\' -r !'C:\\Windows' -r .sln$
+    }
+    "linux" => {
+      ^locate -r \.sln$
     }
     _ => null
   }
@@ -118,6 +122,9 @@ export def "repositories" []: string -> record, nothing -> record {
   let results = match $nu.os-info.name {
     "windows" => {
       ^es -p -r child:^\.git$
+    }
+    "linux" => {
+      ^locate --ignore-case -r \.git$ | lines | par-each { path dirname } | str join "\n"
     }
     _ => null
   }
