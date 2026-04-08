@@ -16,6 +16,8 @@
 
 source ./keybinds.nu
 
+source ./plugins.nu
+
 source ./tools/tools.nu
 
 source ./custom-completions/custom-completions.nu
