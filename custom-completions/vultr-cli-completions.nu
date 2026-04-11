@@ -4,7 +4,7 @@ def "nu-complete vultr-cli output" [] {
 }
 
 def "nu-complete vultr-cli instance-id" [] {
-  ^vultr-cli instance list --output json | from json | get instances | each {|it| {description: $"($it.ip) - ($it.os)" value: $it.id} }
+  ^vultr-cli instance list --output json | from json | get instances | each {|it| {description: $"($it.main_ip) - ($it.os)" value: $it.id} }
 }
 
 def "nu-complete vultr-cli snapshot-id" [] {
@@ -157,7 +157,7 @@ export extern "vultr-cli ssh-key" [
 
 export extern "vultr-cli snapshot create" [
   --id (-i): string@"nu-complete vultr-cli instance-id"                 #Id of the instance
-  --description (->): string                                            #Description of the snapshot
+  --description (-d): string                                            #Description of the snapshot
   --config: string                                                      #Path to config file (default "~/.vultr-cli.yaml")
   --help (-h)                                                           #Help for vultr-cli
   --output: string@"nu-complete vultr-cli output"                       #Output format [ text | json | yaml ] (default "text")
