@@ -50,6 +50,20 @@ export extern "vultr-cli instance" [
   --output: string@"nu-complete vultr-cli output"                       #Output format [ text | json | yaml ] (default "text")
 ]
 
+export extern "vultr-cli instance delete" [
+  id: string@"nu-complete vultr-cli instance-id"                        #Id of the instance
+  --config: string                                                      #Path to config file (default "~/.vultr-cli.yaml")
+  --help (-h)                                                           #Help for vultr-cli
+  --output: string@"nu-complete vultr-cli output"                       #Output format [ text | json | yaml ] (default "text")
+]
+
+export extern "vultr-cli instance destroy" [
+  id: string@"nu-complete vultr-cli instance-id"                        #Id of the instance
+  --config: string                                                      #Path to config file (default "~/.vultr-cli.yaml")
+  --help (-h)                                                           #Help for vultr-cli
+  --output: string@"nu-complete vultr-cli output"                       #Output format [ text | json | yaml ] (default "text")
+]
+
 
 def "nu-complete vultr-cli regions subcommands" [] {
   ^vultr-cli regions --help | lines | where $it =~ '^ {2}[A-Za-z]+[A-Za-z\-]+\s' | parse --regex '^ {2}(?P<value>[^\s*]+)\*?\s+(?P<description>.+)$' | where value != 'vultr-cli'
@@ -164,14 +178,14 @@ export extern "vultr-cli snapshot create" [
 ]
 
 export extern "vultr-cli snapshot get" [
-  id: string@"nu-complete vultr-cli snapshot-id"                        #Subcommands
+  id: string@"nu-complete vultr-cli snapshot-id"                        #Id of the snapshot
   --config: string                                                      #Path to config file (default "~/.vultr-cli.yaml")
   --help (-h)                                                           #Help for vultr-cli
   --output: string@"nu-complete vultr-cli output"                       #Output format [ text | json | yaml ] (default "text")
 ]
 
 export extern "vultr-cli snapshot delete" [
-  id: string@"nu-complete vultr-cli snapshot-id"                        #Subcommands
+  id: string@"nu-complete vultr-cli snapshot-id"                        #Id of the snapshot
   --config: string                                                      #Path to config file (default "~/.vultr-cli.yaml")
   --help (-h)                                                           #Help for vultr-cli
   --output: string@"nu-complete vultr-cli output"                       #Output format [ text | json | yaml ] (default "text")
