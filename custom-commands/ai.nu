@@ -34,18 +34,18 @@ export def menu [] {
 }
 
 def "select role" [] {
-  let role = (^aichat --list-roles | fzf --header "Roles" | str trim)
-  if ($role | is-not-empty) {
-    ["--role", $role]
+  let resp = ^aichat --list-roles | fzf --header "Roles" | complete
+  if ($resp.exit_code == 0) {
+    ["--role", ($resp.stdout | str trim)]
   } else {
     []
   }
 }
 
 def "select model" [] {
-  let model = (^aichat --list-models | fzf --header "Models" | str trim)
-  if ($model | is-not-empty) {
-    ["--model", $model]
+  let resp = ^aichat --list-models | fzf --header "Models" | complete
+  if ($resp.exit_code == 0) {
+    ["--model", ($resp.stdout | str trim)]
   } else {
     []
   }
