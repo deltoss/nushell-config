@@ -45,7 +45,8 @@ export def "select branch" --wrapped [
 ] {
   let branches = (git branch -a --color ...$rest | lines)
   let all = ($extra ++ $branches)
-  let interaction = $all | str join "\n" | fzf --print-query --ansi --header="Git - Branches" | lines
+  let interaction = ($all | str join "\n" | fzf --print-query --ansi --header="Git - Branches"
+    | complete | get --optional stdout | lines)
 
   # Return null if nothing selected
   if ($interaction | is-empty) {
@@ -77,7 +78,7 @@ export def "select commit" --wrapped [
   ...rest
 ] {
   ^git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p" ...$rest
-  | fzf --print-query --ansi --header="Git - Commits" 
+  | fzf --print-query --ansi --header="Git - Commits"
   | str trim
   | ansi strip
   | split row ' '
