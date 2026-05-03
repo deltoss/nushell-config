@@ -1,6 +1,13 @@
 if $nu.os-info.name == "linux" {
+  let arch = ^uname -m | str trim
+  let nvim_arch = match $arch {
+    "aarch64" => "arm64",
+    _ => "x86_64"
+  }
+  let nvim_dir = $"nvim-linux-($nvim_arch)"
+
   $env.PATH ++= [
-    "/opt/nvim-linux-x86_64/bin" # For Neovim installation
+    $"/opt/($nvim_dir)/bin" # For Neovim installation
     $"($env.HOME)/.local/bin"
   ]
 
