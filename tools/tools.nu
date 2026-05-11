@@ -1,7 +1,6 @@
 use ./fzf.nu *
 use ./yazi.nu *
 use ./nvim.nu *
-use ./opencode.nu *
 use ./1password.nu *
 use ./ripgrep.nu *
 use ./bat.nu *

@@ -22,8 +22,6 @@ if $nu.os-info.name == "windows" {
 }
 $env.XDG_CONFIG_HOME = "~/.config" | path expand
 $env.EDITOR = "nvim"
-# Custom environment variable used within nvim & shell scripts to start OpenCode CLI
-$env.OPENCODE_PORT = 4096
 
 if $nu.os-info.name == "windows" {
   # Configure Yazi to open files correctly on Windows.
