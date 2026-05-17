@@ -4,7 +4,7 @@ export def menu [] {
     | sort-by mem --reverse
     | each { |p| $"($p.pid | fill -a r -w 8) ($p.name | fill -a l -w 35) ($p.cpu | math round --precision 1 | fill -a r -w 10) ($p.mem | format filesize MB | fill -a r -w 10)" }
     | str join "\n"
-    | fzf --multi --header="PID     Process Name                   CPU (Tab to select multiple)"
+    | fzf --multi '--header=PID     Process Name                   CPU (Tab to select multiple)'
     | lines
   )
   if ($selected | is-empty) { return }
