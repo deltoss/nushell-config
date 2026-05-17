@@ -18,6 +18,20 @@ $env.config.menus ++= [{
 }]
 
 $env.config.keybindings ++= [{
+  name: ide_completion_menu
+  modifier: none
+  keycode: tab
+  mode: [emacs vi_insert]
+  event: {
+    until: [
+      { send: menu name: ide_completion_menu }
+      { send: menunext }
+      { edit: complete }
+    ]
+  }
+}]
+
+$env.config.keybindings ++= [{
   name: help_menu
   modifier: control
   keycode: char_p
