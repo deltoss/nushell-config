@@ -19,6 +19,7 @@ use ./yazi-completions.nu *
 use ./ya-completions.nu *
 use ./vultr-cli-completions.nu *
 use ./serena-completions.nu *
+use ./fabric-completions.nu *
 
 if $nu.os-info.name == "windows" {
   use ../nu_scripts/custom-completions/winget/winget-completions.nu *
