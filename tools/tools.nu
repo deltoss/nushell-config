@@ -7,7 +7,7 @@ use ./bat.nu *
 use ./visual-studio.nu *
 use ./agg.nu *
 
-# Conditionally import cargo's env.nu, only if it exists
+# Conditional imports based on OS
 use (if ($nu.os-info.name == "linux") { "./blkid.nu" } else { null })
 
 source ./tv.nu
