@@ -5,6 +5,7 @@ use ./1password.nu *
 use ./ripgrep.nu *
 use ./bat.nu *
 use ./visual-studio.nu *
+use ./agg.nu *
 
 # Conditionally import cargo's env.nu, only if it exists
 use (if ($nu.os-info.name == "linux") { "./blkid.nu" } else { null })
