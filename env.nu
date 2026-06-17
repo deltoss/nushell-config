@@ -31,6 +31,8 @@ if $nu.os-info.name == "windows" {
   #   https://yazi-rs.github.io/docs/installation#windows
   $env.YAZI_FILE_ONE = "C:\\Program Files\\Git\\usr\\bin\\file.exe"
   $env.YAZI_CONFIG_HOME = $"($env.XDG_CONFIG_HOME)/yazi"
+
+  $env.ZELLIJ_CONFIG_DIR = $"($env.XDG_CONFIG_HOME)/zellij"
 }
 
 # Configure Nushell command line editing experience to behave like vim.

@@ -6,8 +6,6 @@ use ../nu_scripts/custom-completions/ssh/ssh-completions.nu *
 use ../nu_scripts/custom-completions/git/git-completions.nu *
 use ../nu_scripts/custom-completions/gh/gh-completions.nu *
 use ../nu_scripts/custom-completions/bat/bat-completions.nu *
-use ../nu_scripts/custom-completions/cargo/cargo-completions.nu *
-use ../nu_scripts/custom-completions/npm/npm-completions.nu *
 use ../nu_scripts/custom-completions/docker/docker-completions.nu *
 use ../nu_scripts/custom-completions/podman/podman-completions.nu *
 use ../nu_scripts/custom-completions/dotnet/dotnet-completions.nu *
@@ -15,6 +13,14 @@ use ../nu_scripts/custom-completions/op/op-completions.nu *
 use ../nu_scripts/custom-completions/bitwarden-cli/bitwarden-cli-completions.nu *
 use ../nu_scripts/custom-completions/aws/aws-completions.nu *
 use ../nu_scripts/custom-completions/claude/claude-completions.nu *
+use ../nu_scripts/custom-completions/zellij/zellij-completions.nu *
+
+# Package managers
+use ../nu_scripts/custom-completions/uv/uv-completions.nu *
+use ../nu_scripts/custom-completions/npm/npm-completions.nu *
+use ../nu_scripts/custom-completions/pnpm/pnpm-completions.nu *
+use ../nu_scripts/custom-completions/cargo/cargo-completions.nu *
+
 use ./yazi-completions.nu *
 use ./ya-completions.nu *
 use ./vultr-cli-completions.nu *
@@ -23,4 +29,5 @@ use ./fabric-completions.nu *
 
 if $nu.os-info.name == "windows" {
   use ../nu_scripts/custom-completions/winget/winget-completions.nu *
+  use ../nu_scripts/custom-completions/scoop/scoop-completions.nu *
 }
