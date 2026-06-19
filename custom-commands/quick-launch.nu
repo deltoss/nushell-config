@@ -3,7 +3,7 @@ source ../env.nu
 # Interactive launcher menu. Press a key to launch an app inline.
 export def --env main [] {
   let entries = [
-    { key: 't', label: 'Default Shell',              action: {|| nu } }
+    { key: 't', label: 'Nushell',                    action: {|| nu } }
     { key: 'T', label: 'Admin Nushell',              action: {|| gsudo nu } }
     { key: 'n', label: 'Neovim',                     action: {|| nvim } }
     { key: 'y', label: 'Yazi',                       action: {|| nu -e y } }
