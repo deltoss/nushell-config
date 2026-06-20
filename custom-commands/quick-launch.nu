@@ -9,15 +9,9 @@ export def --env main [] {
     { key: 'y', label: 'Yazi',                             action: {|| nu -e y } }
     { key: 'p', label: 'PowerShell',                       action: {|| pwsh -NoLogo } }
     { key: 'P', label: 'Admin PowerShell',                 action: {|| pwsh -NoProfile -NoLogo -c gsudo } }
-    { key: '1', label: 'Note Taking',                      action: {|| cd (^zoxide query "Note Taking" | str trim); nu -e y } }
-    { key: '2', label: 'Org Notes',                        action: {|| cd (^zoxide query "Org Notes" | str trim); nu -e y } }
-    { key: '3', label: 'HTTP Requests',                    action: {|| cd ~/HTTP; nvim . } }
-    { key: '3', label: 'Configs: Neovim Configs',          action: {|| cd (^zoxide query .config nvim | str trim); nu -e y } }
-    { key: '4', label: 'Configs: Nushell',                 action: {|| cd (^zoxide query .config nushell | str trim); nu -e y } }
-    { key: '5', label: 'Configs: Wezterm Configs',         action: {|| cd (^zoxide query .config wezterm | str trim); nu -e y } }
-    { key: '7', label: 'Configs: Chezmoi - Personal/Work', action: {|| cd (^chezmoi source-path | str trim); nu -e y } }
-    { key: '8', label: 'Configs: Chezmoi - Servers',       action: {|| cd (^zoxide query serversdotfiles | str trim); nu -e y } }
-    { key: '6', label: 'Configs: PowerShell Profile',      action: {|| cd (^zoxide query .config PowerShell | str trim); nu -e y } }
+    { key: 'c', label: 'Zellij: Configs',                  action: {|| nu -c "source ~/.config/nushell/tools/zellij.nu; zjC" } }
+    { key: 'N', label: 'Zellij: Notes',                    action: {|| nu -c "source ~/.config/nushell/tools/zellij.nu; zjn" } }
+    { key: 'h', label: 'HTTP Requests',                    action: {|| cd ~/HTTP; nvim . } }
   ]
 
   print $"(ansi blue)╭────────────────────────────────────────────────╮(ansi reset)"

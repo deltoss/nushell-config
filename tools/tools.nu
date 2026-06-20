@@ -18,3 +18,4 @@ source ./aichat/aichat.nu
 source ./starship.nu
 source ./git-wt.nu
 source ./worktrunk.nu
+source ./zellij.nu
