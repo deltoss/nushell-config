@@ -8,15 +8,23 @@ if $nu.os-info.name == "linux" {
 
   $env.PATH ++= [
     $"/opt/($nvim_dir)/bin" # For Neovim installation
-    $"($env.HOME)/.local/bin",
-    $"($env.HOME)/.cargo/bin", # Rust package manager
-    $"($env.HOME)/.dotnet/tools", # .NET tools
+    ($nu.home-dir | path join ".local" "bin")
+    ($nu.home-dir | path join ".cargo" "bin")
+    ($nu.home-dir | path join ".deno" "bin")
+    ($nu.home-dir | path join ".dotnet")
+    ($nu.home-dir | path join ".dotnet" "tools")
+    ($nu.home-dir | path join "go" "bin")
+    "/home/linuxbrew/.linuxbrew/bin" # homebrew
+    "/home/linuxbrew/.linuxbrew/sbin"
   ]
 
   # Conditionally import cargo's env.nu, only if it exists
   const path = "~/.cargo/env.nu" 
   const source = if ($path | path exists) { $path } else { null }
   source $source
+
+  $env.DOTNET_ROOT = ($nu.home-dir | path join ".dotnet") # So `dotnet tool` works
+  $env.HOMEBREW_PREFIX = "/home/linuxbrew/.linuxbrew"
 }
 
 if $nu.os-info.name == "windows" {
