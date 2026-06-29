@@ -85,4 +85,16 @@ $env.config.keybindings ++= [{
       cmd: "print ''; kill menu"
     }
   ]
+}
+{
+  name: quicklaunch_menu
+  modifier: NONE
+  keycode: Char_l
+  mode: [vi_normal]
+  event: [
+    {
+      send: executehostcommand,
+      cmd: "nu --no-config-file --no-std-lib ~/.config/nushell/custom-commands/quick-launch.nu"
+    }
+  ]
 }]
