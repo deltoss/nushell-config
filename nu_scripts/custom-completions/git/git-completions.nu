@@ -231,17 +231,18 @@ const short_status_descriptions = {
   "UU": "Both modified (in merge conflict)"
 }
 
-def "nu-complete git files" [] {
+def "nu-complete git files" [path?: string] {
   let relevant_statuses = ["?",".M", "MM", "MD", ".D", "UU"]
-  ^git status -uall --porcelain=2
+  ^git status -uall --porcelain=2 (if ($path | describe) == 'string' and ($path | str length) != 0 { $"($path)" } else { "." } )
   | lines
+  | first 300             # limit the number of data for performance
   | each { |$it|
     if $it starts-with "1 " {
-      $it | parse --regex "1 (?P<short_status>\\S+) (?:\\S+\\s?){6} (?P<value>\\S+)"
+      $it | parse --regex "1 (?P<short_status>\\S+) (?:\\S+\\s?){6} (?P<value>.+)"
     } else if $it starts-with "2 " {
-      $it | parse --regex "2 (?P<short_status>\\S+) (?:\\S+\\s?){6} (?P<value>\\S+)"
+      $it | parse --regex "2 (?P<short_status>\\S+) (?:\\S+\\s?){6} (?P<value>.+)"
     } else if $it starts-with "u " {
-      $it | parse --regex "u (?P<short_status>\\S+) (?:\\S+\\s?){8} (?P<value>\\S+)"
+      $it | parse --regex "u (?P<short_status>\\S+) (?:\\S+\\s?){8} (?P<value>.+)"
     } else if $it starts-with "? " {
       $it | parse --regex "(?P<short_status>.{1}) (?P<value>.+)"
     } else {
@@ -250,6 +251,7 @@ def "nu-complete git files" [] {
   }
   | flatten
   | where $it.short_status in $relevant_statuses
+  | update value { |row| if ($row.value | str contains " ") { $"`($row.value)`" } else { $row.value } }
   | insert "description" { |e| $short_status_descriptions | get $e.short_status}
 }
 
@@ -261,17 +263,22 @@ def "nu-complete git refs" [] {
   nu-complete git local branches
   | parse "{value}"
   | insert description Branch
+  | append (nu-complete git remotes | parse '{value}' | insert description 'Remote branch')
   | append (nu-complete git tags | parse "{value}" | insert description Tag)
   | append (nu-complete git built-in-refs)
 }
 
 def "nu-complete git files-or-refs" [] {
-  nu-complete git local branches
-  | parse "{value}"
-  | insert description Branch
-  | append (nu-complete git files | where description == "Modified" | select value)
-  | append (nu-complete git tags | parse "{value}" | insert description Tag)
-  | append (nu-complete git built-in-refs)
+  {
+    options: { sort: false },
+    completions: (
+      nu-complete git files | where description == "Modified" | select value description
+      | append (nu-complete git local branches | parse '{value}' | insert description 'Local branch')
+      | append (nu-complete git built-in-refs | parse '{value}' | insert description 'Built-in Refs')
+      | append (nu-complete git tags | parse '{value}' | insert description Tag)
+      | append (nu-complete git remotes | get 'value' | parse '{value}' | insert description 'Remote branch')
+    )
+  }
 }
 
 def "nu-complete git aliases" [] {
@@ -532,6 +539,14 @@ export extern "git switch" [
   --track(-t)                                     # set "upstream" configuration
 ]
 
+# Find commits yet to be applied to upstream
+export extern "git cherry" [
+  upstream?: string@"nu-complete git mergable sources"  # Upstream branch to search for equivalent commits. Defaults to the upstream branch of HEAD.
+  head?: string@"nu-complete git mergable sources"      # Working branch; defaults to HEAD.
+  limit?: string                                        # Do not report commits up to (and including) limit.
+  --verbose(-v)                                         # Show the commit subjects next to the SHA1s.
+]
+
 # Apply the change introduced by an existing commit
 export extern "git cherry-pick" [
   commit?: string@"nu-complete git commits all" # The commit ID to be cherry-picked
@@ -583,18 +598,18 @@ export extern "git branch" [
   --no-merged                                                    # list unreachable branches
   --set-upstream-to: string@"nu-complete git available upstream" # set upstream for branch
   --unset-upstream                                               # remote upstream for branch
-  --all                                                          # list both remote and local branches
-  --copy                                                         # copy branch together with config and reflog
+  --all(-a)                                                      # list both remote and local branches
+  --copy(-c)                                                     # copy branch together with config and reflog
   --format                                                       # specify format for listing branches
-  --move                                                         # rename branch
+  --move(-m)                                                     # rename branch
   --points-at                                                    # list branches that point at an object
   --show-current                                                 # print the name of the current branch
-  --verbose                                                      # show commit and upstream for each branch
+  --verbose(-v)                                                  # show commit and upstream for each branch
   --color                                                        # use color in output
-  --quiet                                                        # suppress messages except errors
+  --quiet(-q)                                                    # suppress messages except errors
   --delete(-d)                                                   # delete branch
   -D                                                             # force delete branch
-  --list                                                         # list branches
+  --list(-l)                                                     # list branches
   --contains: string@"nu-complete git commits all"               # show only branches that contain the specified commit
   --no-contains                                                  # show only branches that don't contain specified commit
   --track(-t)                                                    # when creating a branch, set upstream
