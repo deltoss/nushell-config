@@ -94,7 +94,7 @@ $env.config.keybindings ++= [{
   event: [
     {
       send: executehostcommand,
-      cmd: "nu --no-config-file --no-std-lib ~/.config/nushell/custom-commands/quick-launch.nu"
+      cmd: "print ''; nu --no-config-file --no-std-lib ~/.config/nushell/custom-commands/quick-launch.nu"
     }
   ]
 }]
