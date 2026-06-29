@@ -40,9 +40,9 @@ $env.config.keybindings ++= [{
 }
 {
   name: search_menu
-  modifier: CONTROL
+  modifier: NONE
   keycode: Char_s
-  mode: [emacs vi_insert vi_normal]
+  mode: [vi_normal]
   event: [
     {
       send: executehostcommand,
@@ -52,9 +52,9 @@ $env.config.keybindings ++= [{
 }
 {
   name: ai_menu
-  modifier: CONTROL
+  modifier: NONE
   keycode: Char_a
-  mode: [emacs vi_insert vi_normal]
+  mode: [vi_normal]
   event: [
     {
       send: executehostcommand,
@@ -64,9 +64,9 @@ $env.config.keybindings ++= [{
 }
 {
   name: git_menu
-  modifier: CONTROL
+  modifier: NONE
   keycode: Char_g
-  mode: [emacs vi_insert vi_normal]
+  mode: [vi_normal]
   event: [
     {
       send: executehostcommand,
@@ -76,9 +76,9 @@ $env.config.keybindings ++= [{
 }
 {
   name: kill__menu
-  modifier: CONTROL
+  modifier: NONE
   keycode: Char_k
-  mode: [emacs vi_insert vi_normal]
+  mode: [vi_normal]
   event: [
     {
       send: executehostcommand,
