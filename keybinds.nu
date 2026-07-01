@@ -97,4 +97,16 @@ $env.config.keybindings ++= [{
       cmd: "print ''; nu --no-config-file --no-std-lib ~/.config/nushell/custom-commands/quick-launch.nu"
     }
   ]
+}
+{
+  name: zellij_menu
+  modifier: NONE
+  keycode: Char_z
+  mode: [vi_normal]
+  event: [
+    {
+      send: executehostcommand,
+      cmd: "print ''; zellij menu"
+    }
+  ]
 }]

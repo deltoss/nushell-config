@@ -8,3 +8,4 @@ export module ./ai.nu
 export module ./dotnet.nu
 export module ./run.nu
 export module ./vultr-cli.nu
+export module ./zellij.nu
