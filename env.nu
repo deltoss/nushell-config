@@ -52,7 +52,8 @@ $env.config.completions.algorithm = "fuzzy"
 # When true, the current directory and running command are shown in the terminal tab/window title.
 # Also abbreviates the directory name by prepending ~ to the home directory and its subdirectories.
 $env.config.shell_integration.osc2 = true
-$env.config.shell_integration.osc7 = true
+$env.config.shell_integration.osc7 = true      # cwd via OSC 7
+$env.config.shell_integration.osc9_9 = true    # cwd via OSC 9;9 - Windows Terminal uses this for "duplicate tab in same directory"
 
 $env.config.datetime_format.normal = "%d/%m/%y %I:%M:%S%p"
 
