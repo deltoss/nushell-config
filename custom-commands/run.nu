@@ -32,7 +32,7 @@ export def --env menu []: string -> nothing, list<string> -> nothing {
   print ''
 
   print $"(ansi bo)(ansi cyan)== Programs ==(ansi reset)"
-  print $"(ansi bo)(ansi cyan)n(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]eovim"
+  print $"(ansi bo)(ansi cyan)n(ansi bl) ⟶ (ansi reset)[(ansi bo)N(ansi reset)]eovim"
   print $"(ansi bo)(ansi cyan)v(ansi bl) ⟶ (ansi reset)[(ansi bo)V(ansi reset)]isual Studio IDE"
   print ''
 
