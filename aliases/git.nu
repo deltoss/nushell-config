@@ -41,7 +41,7 @@ export alias gi = git init
 export alias gl = git log # Note this purposely calls the internal command git log that formats git log to be more human readable
 export alias gtoday = ^git log --since='midnight' --oneline $"--author=(git config get 'user.name')"
 
-export alias gm = git merge -X ignore-cr-at-eol
+export alias gm = git merge -X ignore-cr-at-eol -X ignore-space-change
 
 export alias gmt = git mergetool
 export alias gma = git merge --abort
