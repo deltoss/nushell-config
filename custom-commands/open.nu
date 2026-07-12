@@ -9,7 +9,7 @@ def "get folder" [] {
 }
 
 # Run a program for stdin
-export def --env main []: string -> nothing, list<string> -> nothing {
+export def --env with []: string -> nothing, list<string> -> nothing {
   $in | menu
 }
 

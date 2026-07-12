@@ -1,7 +1,7 @@
-let layouts_dir = if ($env.ZELLIJ_CONFIG_DIR | is-not-empty) {
+let layouts_dir = if ($env has 'ZELLIJ_CONFIG_DIR') {
   $'($env.ZELLIJ_CONFIG_DIR)/layouts'
 } else {
-  $'($env.XDG_HOME_DIR)/zellij/layouts'
+  $'($env.XDG_CONFIG_HOME)/zellij/layouts'
 }
 
 export alias zj = ^zellij

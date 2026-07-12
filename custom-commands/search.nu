@@ -1,6 +1,6 @@
 use ../tools/visual-studio.nu [devenv]
 use ./fzf-helpers.nu ['parse fzf']
-use ./run.nu
+use ./open.nu
 
 # Search for items
 export def --env main []: nothing -> nothing {
@@ -40,7 +40,7 @@ export def --env menu []: nothing -> nothing {
 
   if ($result | is-not-empty) {
     print ''
-    $result.selections | run
+    $result.selections | open with
   }
 }
 

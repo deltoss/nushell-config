@@ -6,6 +6,6 @@ export module ./pr.nu
 export module ./kill.nu
 export module ./ai.nu
 export module ./dotnet.nu
-export module ./run.nu
+export module ./open.nu
 export module ./vultr-cli.nu
 export module ./zellij.nu

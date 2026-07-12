@@ -1,5 +1,5 @@
 use "../custom-commands/fzf-helpers.nu" ['parse fzf']
-use "../custom-commands/run-detached.nu"
+use "../custom-commands/start.nu"
 
 # Sample usage:
 #   devenv MySolution.sln
@@ -17,7 +17,7 @@ export def --wrapped devenv [...rest] {
 
   if ($vsPath | is-not-empty) {
     let devenvPath = ($vsPath | path join "Common7" "IDE" "devenv.exe")
-    run-detached $devenvPath ...$rest
+    start detached $devenvPath ...$rest
   } else {
     error make { msg: "No Visual Studio installation found" }
   }

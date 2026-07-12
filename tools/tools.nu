@@ -13,7 +13,6 @@ use (if ($nu.os-info.name == "linux") { "./blkid.nu" } else { null })
 source ./tv.nu
 source ./zoxide.nu
 source ./mise.nu
-source ./intelli-shell.nu
 source ./aichat/aichat.nu
 source ./starship.nu
 source ./git-wt.nu

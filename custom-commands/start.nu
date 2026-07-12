@@ -1,4 +1,4 @@
-export def main --wrapped [cmd, ...rest] {
+export def detached --wrapped [cmd, ...rest] {
   let os = $nu.os-info.name
 
   if $os == "windows" {
