@@ -118,3 +118,48 @@ export def "block-storage menu attach" [] {
     }
   }
 }
+
+def "nu-complete instance menu subcommands" [] {
+  [select, ssh, delete, create-from-snapshot]
+}
+
+# Completion stub only — real commands defined above
+export extern "instance menu" [
+  command?: string@"nu-complete instance menu subcommands"              #Subcommands
+]
+
+def "nu-complete snapshot menu subcommands" [] {
+  [select]
+}
+
+# Completion stub only — real commands defined above
+export extern "snapshot menu" [
+  command?: string@"nu-complete snapshot menu subcommands"              #Subcommands
+]
+
+def "nu-complete ssh-key menu subcommands" [] {
+  [select]
+}
+
+# Completion stub only — real commands defined above
+export extern "ssh-key menu" [
+  command?: string@"nu-complete ssh-key menu subcommands"               #Subcommands
+]
+
+def "nu-complete firewall group menu subcommands" [] {
+  [select]
+}
+
+# Completion stub only — real commands defined above
+export extern "firewall group menu" [
+  command?: string@"nu-complete firewall group menu subcommands"        #Subcommands
+]
+
+def "nu-complete block-storage menu subcommands" [] {
+  [select, attach]
+}
+
+# Completion stub only — real commands defined above
+export extern "block-storage menu" [
+  command?: string@"nu-complete block-storage menu subcommands"         #Subcommands
+]
