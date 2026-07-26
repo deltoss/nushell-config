@@ -9,3 +9,4 @@ export module ./dotnet.nu
 export module ./open.nu
 export module ./vultr-cli.nu
 export module ./zellij.nu
+export module ./leader.nu

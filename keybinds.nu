@@ -39,74 +39,14 @@ $env.config.keybindings ++= [{
   event: { send: menu name: help_menu }
 }
 {
-  name: search_menu
+  name: leader_menu
   modifier: NONE
-  keycode: Char_s
+  keycode: Space
   mode: [vi_normal]
   event: [
     {
       send: executehostcommand,
-      cmd: "print ''; search menu"
-    }
-  ]
-}
-{
-  name: ai_menu
-  modifier: NONE
-  keycode: Char_a
-  mode: [vi_normal]
-  event: [
-    {
-      send: executehostcommand,
-      cmd: "print ''; ai menu"
-    }
-  ]
-}
-{
-  name: git_menu
-  modifier: NONE
-  keycode: Char_g
-  mode: [vi_normal]
-  event: [
-    {
-      send: executehostcommand,
-      cmd: "print ''; git menu"
-    }
-  ]
-}
-{
-  name: kill__menu
-  modifier: NONE
-  keycode: Char_k
-  mode: [vi_normal]
-  event: [
-    {
-      send: executehostcommand,
-      cmd: "print ''; kill menu"
-    }
-  ]
-}
-{
-  name: quicklaunch_menu
-  modifier: NONE
-  keycode: Char_l
-  mode: [vi_normal]
-  event: [
-    {
-      send: executehostcommand,
-      cmd: "print ''; nu --no-config-file --no-std-lib ~/.config/nushell/custom-commands/quick-launch.nu"
-    }
-  ]
-}
-{
-  name: zellij_menu
-  modifier: NONE
-  keycode: Char_z
-  mode: [vi_normal]
-  event: [
-    {
-      send: executehostcommand,
-      cmd: "print ''; zellij menu"
+      cmd: "print ''; leader menu"
     }
   ]
 }]
