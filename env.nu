@@ -14,6 +14,7 @@ if $nu.os-info.name == "linux" {
     ($nu.home-dir | path join ".dotnet")
     ($nu.home-dir | path join ".dotnet" "tools")
     ($nu.home-dir | path join "go" "bin")
+    ($nu.home-dir | path join ".opencode" "bin")
     "/home/linuxbrew/.linuxbrew/bin" # homebrew
     "/home/linuxbrew/.linuxbrew/sbin"
   ]
