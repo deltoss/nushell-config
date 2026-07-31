@@ -13,14 +13,13 @@ export def --env menu [] {
   print $"(ansi bo)(ansi cyan)r(ansi bl) ⟶ (ansi reset)[(ansi bo)R(ansi reset)]emove"
   print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
 
-  mut result = ''
   loop {
     let key = (input listen --types [key])
     match [$key.code $key.modifiers] {
-      ['l', []] => { $result = list; break }
-      ['c', []] => { $result = change; break }
-      ['a', []] => { $result = add; break }
-      ['r', []] => { $result = remove; break }
+      ['l', []] => { list | print; break }
+      ['c', []] => { change; break }
+      ['a', []] => { add; break }
+      ['r', []] => { remove; break }
       ['q', []] => { break }
       ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
       _ => {
@@ -28,8 +27,6 @@ export def --env menu [] {
       }
     }
   }
-
-  $result
 }
 
 # List git worktrees
