@@ -37,10 +37,10 @@ export def zjn [] {
 # On cd, rename the zellij tab to the current folder name, but only while the
 # tab has a useless default name ("Tab #1" etc) or a name this hook set itself
 # (tracked in $env.ZELLIJ_DYNAMIC_TAB_NAME). Manually named tabs are left alone.
-# The hook body is a string (not a closure) so the env var change persists.
+# Hook blocks preserve environment changes.
 if 'ZELLIJ' in $env {
   $env.config.hooks.env_change.PWD = (
-    $env.config.hooks.env_change.PWD? | default [] | append r#'
+    $env.config.hooks.env_change.PWD? | default [] | append {||
       $env.ZELLIJ_DYNAMIC_TAB_NAME = (do {
         let focused = (
           ^zellij action dump-layout
@@ -51,14 +51,15 @@ if 'ZELLIJ' in $env {
           | default ''
         )
         let folder = ($env.PWD | path basename)
+        let tab_name = $"📂 ($folder)"
         let dynamic = ($env.ZELLIJ_DYNAMIC_TAB_NAME? | default '')
         if $folder != '' and ($focused =~ '^[Tt]ab' or $focused == $dynamic) {
-          ^zellij action rename-tab $folder
-          $folder
+          ^zellij action rename-tab $tab_name
+          $tab_name
         } else {
           $dynamic
         }
       })
-    '#
+    }
   )
 }
