@@ -51,11 +51,12 @@ if 'ZELLIJ' in $env {
           | default ''
         )
         let folder = ($env.PWD | path basename)
-        let tab_name = $"📂 ($folder)"
+        let label = $"📂 ($folder)"
         let dynamic = ($env.ZELLIJ_DYNAMIC_TAB_NAME? | default '')
         if $folder != '' and ($focused =~ '^[Tt]ab' or $focused == $dynamic) {
-          ^zellij action rename-tab $tab_name
-          $tab_name
+          ^zellij action rename-pane $label
+          ^zellij action rename-tab $label
+          $label
         } else {
           $dynamic
         }
