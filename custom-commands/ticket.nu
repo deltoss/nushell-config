@@ -21,7 +21,7 @@ export def info [] {
     let issue_key = $match | first | get project_key
     return {
       key: $issue_key
-      url: $"($env.PROJECTMANAGEMENTBASEURL)/browse/($issue_key)"
+      url: $"(jira-base-url)/browse/($issue_key)"
     }
   }
 
@@ -81,6 +81,6 @@ export def "menu open" [
 ] {
   let issue = menu select --all
   if ($issue | is-not-empty) {
-    start $"($env.PROJECTMANAGEMENTBASEURL)/browse/($issue.key)"
+    start $"(jira-base-url)/browse/($issue.key)"
   }
 }
