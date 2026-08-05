@@ -2,12 +2,19 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
+use ../tools/1password.nu [op-secret]
+
+# Basic-auth token for the Bitbucket API, from 1Password
+# (or $env.BITBUCKETBASE64AUTHTOKEN when set)
+def bitbucket-token [] {
+  op-secret BITBUCKETBASE64AUTHTOKEN "op://Work/Atlassian - BitBucket/API Key"
+}
 
 # Perform an authenticated GET against the Bitbucket Cloud v2 API
 def bitbucket-get [path: string] {
   http get --headers {
     accept: application/json
-    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
+    authorization: $"Basic (bitbucket-token)"
   } $"https://api.bitbucket.org/2.0/($path)"
 }
 
