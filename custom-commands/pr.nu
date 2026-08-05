@@ -82,6 +82,66 @@ export def "parse pr-url" [pr_url: string] {
   $parsed | first
 }
 
+export def "get pull-request" [
+  # Workspace name or slug
+  workspace: string
+  # Repository slug
+  repository: string
+  # Pull request id
+  id: string
+] {
+  http get --headers {
+    accept: application/json
+    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
+  } $"https://api.bitbucket.org/2.0/repositories/($workspace)/($repository)/pullrequests/($id)"
+}
+
+# Clone the repo as a bare clone if it isn't there yet.
+# One bare clone is shared by every PR worktree of that repo.
+def ensure-bare-clone [bare_dir: string, clone_url: string] {
+  if ($bare_dir | path exists) {
+    return
+  }
+
+  print $"(ansi green)Cloning ($clone_url) into ($bare_dir)...(ansi reset)"
+  mkdir ($bare_dir | path dirname)
+  let clone_result = ^git clone --bare $clone_url $bare_dir | complete
+  if $clone_result.exit_code != 0 {
+    error make {msg: $"git clone failed: ($clone_result.stderr)"}
+  }
+  # Bare clones have no fetch refspec; add the standard one so
+  # `git fetch` maintains refs/remotes/origin/* like a normal clone
+  ^git -C $bare_dir config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+}
+
+# Add a worktree for the branch if it isn't there yet
+def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
+  if ($target_dir | path exists) {
+    return
+  }
+
+  let wt_result = ^git -C $bare_dir worktree add $target_dir -B $branch $"origin/($branch)" | complete
+  if $wt_result.exit_code != 0 {
+    error make {msg: $"git worktree add failed: ($wt_result.stderr)"}
+  }
+}
+
+# Open the checked-out PR diff in the chosen tool, prompting if none was given
+def open-diff [dest_branch: string, mode?: string] {
+  let mode = $mode | default {
+    [nvim hunk none] | input list "Open diff with:"
+  }
+
+  # origin/<dest> always exists here (fetched before checkout); a local <dest> branch may not
+  let range = $"origin/($dest_branch)...HEAD"
+  match $mode {
+    "nvim" => { ^nvim -c $"CodeDiff ($range)" }
+    "hunk" => { ^hunk $range }
+    "none" | "" | null => {}
+    _ => { log warning $"Unknown mode '($mode)', skipping diff" }
+  }
+}
+
 # Check out a Bitbucket pull request into a dedicated worktree under ~/PRs.
 # Clones the repo once per repository (bare clone at ~/PRs/<repo>/.bare), then
 # adds a worktree per PR (~/PRs/<repo>/<pr-id>), so reviewing more PRs of the
@@ -95,62 +155,30 @@ export def --env review [
   let pr = parse pr-url $pr_url
 
   log info $"Fetching PR #($pr.id) from Bitbucket..."
-  let bb_pr = http get --headers {
-    accept: application/json
-    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
-  } $"https://api.bitbucket.org/2.0/repositories/($pr.workspace)/($pr.repository)/pullrequests/($pr.id)"
-
+  let bb_pr = get pull-request $pr.workspace $pr.repository $pr.id
   if $bb_pr.source.repository.full_name != $bb_pr.destination.repository.full_name {
     error make {msg: "pr review doesn't support pull requests raised from a fork yet"}
   }
-
   let source_branch = $bb_pr.source.branch.name
   let dest_branch = $bb_pr.destination.branch.name
+
   let repo_dir = (pr-reviews-folder | path join $pr.repository)
   let bare_dir = ($repo_dir | path join ".bare")
   let target_dir = ($repo_dir | path join $pr.id)
-  let clone_url = $"git@bitbucket.org:($pr.workspace)/($pr.repository).git"
 
-  if not ($bare_dir | path exists) {
-    print $"(ansi green)Cloning ($pr.repository) into ($bare_dir)...(ansi reset)"
-    mkdir $repo_dir
-    let clone_result = ^git clone --bare $clone_url $bare_dir | complete
-    if $clone_result.exit_code != 0 {
-      error make {msg: $"git clone failed: ($clone_result.stderr)"}
-    }
-    # Bare clones have no fetch refspec; add the standard one so
-    # `git fetch` maintains refs/remotes/origin/* like a normal clone
-    ^git -C $bare_dir config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-  }
+  ensure-bare-clone $bare_dir $"git@bitbucket.org:($pr.workspace)/($pr.repository).git"
 
   print $"(ansi green)Fetching latest '($source_branch)' and '($dest_branch)'...(ansi reset)"
   ^git -C $bare_dir fetch origin $source_branch $dest_branch
 
-  if not ($target_dir | path exists) {
-    let wt_result = ^git -C $bare_dir worktree add $target_dir -B $source_branch $"origin/($source_branch)" | complete
-    if $wt_result.exit_code != 0 {
-      error make {msg: $"git worktree add failed: ($wt_result.stderr)"}
-    }
-  }
-
+  ensure-worktree $bare_dir $target_dir $source_branch
   cd $target_dir
   ^git reset --hard $"origin/($source_branch)"
 
   print $"(ansi green)PR #($pr.id) checked out: ($source_branch) -> ($dest_branch)(ansi reset)"
   print $"(ansi green)Worktree: ($target_dir)(ansi reset)"
 
-  let mode = $mode | default {
-    [nvim hunk none] | input list "Open diff with:"
-  }
-
-  # origin/<dest> always exists here (fetched above); a local <dest> branch may not
-  let range = $"origin/($dest_branch)...HEAD"
-  match $mode {
-    "nvim" => { ^nvim -c $"CodeDiff ($range)" }
-    "hunk" => { ^hunk $range }
-    "none" | "" | null => {}
-    _ => { log warning $"Unknown mode '($mode)', skipping diff" }
-  }
+  open-diff $dest_branch $mode
 }
 
 # Raise a git pull request for the current repository
