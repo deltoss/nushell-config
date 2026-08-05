@@ -2,11 +2,19 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 
-export def "get workspaces" [] {
+# Perform an authenticated GET against the Bitbucket Cloud v2 API
+def bitbucket-get [path: string] {
   http get --headers {
     accept: application/json
     authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
-  } https://api.bitbucket.org/2.0/user/permissions/workspaces | get values | select workspace.uuid workspace.slug workspace.name | rename id slug name
+  } $"https://api.bitbucket.org/2.0/($path)"
+}
+
+export def "get workspaces" [] {
+  bitbucket-get "user/permissions/workspaces"
+    | get values
+    | select workspace.uuid workspace.slug workspace.name
+    | rename id slug name
 }
 
 export def "select workspace" [] {
@@ -38,10 +46,9 @@ export def "get repositories" [
     ""
   }
 
-  http get --headers {
-    accept: application/json
-    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
-  } $"https://api.bitbucket.org/2.0/repositories/($workspace | url encode)?role=contributor($full_query)" | get values | select name slug
+  bitbucket-get $"repositories/($workspace | url encode)?role=contributor($full_query)"
+    | get values
+    | select name slug
 }
 
 export def url [
@@ -90,10 +97,7 @@ export def "get pull-request" [
   # Pull request id
   id: string
 ] {
-  http get --headers {
-    accept: application/json
-    authorization: $"Basic ($env.BITBUCKETBASE64AUTHTOKEN)"
-  } $"https://api.bitbucket.org/2.0/repositories/($workspace)/($repository)/pullrequests/($id)"
+  bitbucket-get $"repositories/($workspace)/($repository)/pullrequests/($id)"
 }
 
 # Clone the repo as a bare clone if it isn't there yet.
@@ -105,10 +109,7 @@ def ensure-bare-clone [bare_dir: string, clone_url: string] {
 
   print $"(ansi green)Cloning ($clone_url) into ($bare_dir)...(ansi reset)"
   mkdir ($bare_dir | path dirname)
-  let clone_result = ^git clone --bare $clone_url $bare_dir | complete
-  if $clone_result.exit_code != 0 {
-    error make {msg: $"git clone failed: ($clone_result.stderr)"}
-  }
+  ^git clone --bare $clone_url $bare_dir
   # Bare clones have no fetch refspec; add the standard one so
   # `git fetch` maintains refs/remotes/origin/* like a normal clone
   ^git -C $bare_dir config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
@@ -145,16 +146,19 @@ def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
     return
   }
 
-  let wt_result = ^git -C $bare_dir worktree add $target_dir -B $branch $"origin/($branch)" | complete
-  if $wt_result.exit_code != 0 {
-    error make {msg: $"git worktree add failed: ($wt_result.stderr)"}
-  }
+  ^git -C $bare_dir worktree add $target_dir -B $branch $"origin/($branch)"
+}
+
+const review_modes = [nvim, hunk, none]
+
+def "nu-complete review-modes" [] {
+  $review_modes
 }
 
 # Open the checked-out PR diff in the chosen tool, prompting if none was given
 def open-diff [dest_branch: string, mode?: string] {
   let mode = $mode | default {
-    [nvim hunk none] | input list "Open diff with:"
+    $review_modes | input list "Open diff with:"
   }
 
   # origin/<dest> always exists here (fetched before checkout); a local <dest> branch may not
@@ -175,7 +179,7 @@ def open-diff [dest_branch: string, mode?: string] {
 # To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
 export def --env review [
   pr_url: string # Bitbucket PR URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
-  --mode: string # Diff tool to open after checkout: nvim, hunk or none. Prompts when omitted
+  --mode: string@"nu-complete review-modes" # Diff tool to open after checkout: nvim, hunk or none. Prompts when omitted
 ] {
   let pr = parse pr-url $pr_url
 
