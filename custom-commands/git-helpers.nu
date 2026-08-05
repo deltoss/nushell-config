@@ -10,6 +10,10 @@ export def worktrees-folder [] {
   $"(repo-folder).worktrees/"
 }
 
+export def pr-reviews-folder [] {
+  "~/PRs" | path expand
+}
+
 export def parse-git-url [url: string] {
   let url_info = { protocol: null, host: null, path: null, owner: null, repository: null, full_url: $url }
 
