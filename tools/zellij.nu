@@ -35,32 +35,25 @@ export def zjn [] {
 }
 
 # On cd, rename the zellij tab to the current folder name, but only while the
-# tab has a useless default name ("Tab #1" etc) or a name this hook set itself
-# (tracked in $env.ZELLIJ_DYNAMIC_TAB_NAME). Manually named tabs are left alone.
-# Hook blocks preserve environment changes.
+# tab has a useless default name ("Tab #1" etc) or starts with an emoji,
+# which means it was auto-renamed. Manually named tabs are left alone.
 if 'ZELLIJ' in $env {
   $env.config.hooks.env_change.PWD = (
     $env.config.hooks.env_change.PWD? | default [] | append {||
-      $env.ZELLIJ_DYNAMIC_TAB_NAME = (do {
-        let focused = (
-          ^zellij action dump-layout
-          | lines
-          | parse --regex 'tab name="(?<name>[^"]*)"(?<attrs>[^{]*)'
-          | where attrs =~ 'focus=true'
-          | get -o 0.name
-          | default ''
-        )
-        let folder = ($env.PWD | path basename)
-        let label = $"📂 ($folder)"
-        let dynamic = ($env.ZELLIJ_DYNAMIC_TAB_NAME? | default '')
-        if $folder != '' and ($focused =~ '^[Tt]ab' or $focused == $dynamic) {
-          ^zellij action rename-pane $label
-          ^zellij action rename-tab $label
-          $label
-        } else {
-          $dynamic
-        }
-      })
+      let focused = (
+        ^zellij action dump-layout
+        | lines
+        | parse --regex 'tab name="(?<name>[^"]*)"(?<attrs>[^{]*)'
+        | where attrs =~ 'focus=true'
+        | get -o 0.name
+        | default ''
+      )
+      let folder = ($env.PWD | path basename)
+      let label = $"📂 ($folder)"
+      if $folder != '' and ($focused =~ '^([Tt]ab|\p{Extended_Pictographic})') {
+        print --no-newline $"\e]2;($label)\u{7}" # Prints OSC 2 for pane renaming
+        ^zellij action rename-tab $label
+      }
     }
   )
 }
