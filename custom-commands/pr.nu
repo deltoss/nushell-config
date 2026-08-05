@@ -175,16 +175,12 @@ def open-diff [dest_branch: string, mode?: string] {
     "nvim" => { ^nvim -c $"CodeDiff ($range)" }
     "hunk" => { ^hunk $range }
     "vs" => {
-      # Visual Studio has no CLI for a branch-range diff (devenv /Diff only
-      # compares two files), so open the solution and use the IDE's built-in
-      # branch compare, which the printed hint walks through. The worktree
-      # already has the source branch checked out and origin/<dest> fetched,
-      # so the compare target is ready to pick.
       if not (devenv is-installed) {
         log warning "Visual Studio isn't available on this machine"
         return
       }
-      print $"To see the full diff in Visual Studio: Git > Manage Branches > right-click 'origin/($dest_branch)' > Compare with Current Branch"
+      print $"(ansi yellow)Visual Studio can't open a branch diff from the command line. To see the full diff:(ansi reset)"
+      print $"(ansi bo)(ansi cyan)Git(ansi reset) > (ansi bo)(ansi cyan)Manage Branches(ansi reset) > right-click (ansi bo)(ansi green)origin/($dest_branch)(ansi reset) > (ansi bo)(ansi cyan)Compare with Current Branch(ansi reset)"
       devenv solution
     }
     "none" | "" | null => {}
