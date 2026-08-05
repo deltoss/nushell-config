@@ -7,7 +7,7 @@ use ../tools/1password.nu [op-secret]
 # Basic-auth token for the Bitbucket API, from 1Password
 # (or $env.BITBUCKETBASE64AUTHTOKEN when set)
 def bitbucket-token [] {
-  op-secret BITBUCKETBASE64AUTHTOKEN "op://Work/Atlassian - BitBucket/API Key"
+  op-secret BITBUCKETBASE64AUTHTOKEN "op://Work/Atlassian - Work/Scripting - BitBucket"
 }
 
 # Perform an authenticated GET against the Bitbucket Cloud v2 API
