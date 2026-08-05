@@ -1,6 +1,7 @@
 use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
+use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
 
 # Perform an authenticated GET against the Bitbucket Cloud v2 API
 def bitbucket-get [path: string] {
@@ -149,16 +150,23 @@ def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
   ^git -C $bare_dir worktree add $target_dir -B $branch $"origin/($branch)"
 }
 
-const review_modes = [nvim, hunk, none]
+# Visual Studio is Windows-only, so offer it as a diff tool only where installed
+def available-review-modes [] {
+  if (devenv is-installed) {
+    [nvim, hunk, vs, none]
+  } else {
+    [nvim, hunk, none]
+  }
+}
 
 def "nu-complete review-modes" [] {
-  $review_modes
+  available-review-modes
 }
 
 # Open the checked-out PR diff in the chosen tool, prompting if none was given
 def open-diff [dest_branch: string, mode?: string] {
   let mode = $mode | default {
-    $review_modes | input list "Open diff with:"
+    available-review-modes | input list "Open diff with:"
   }
 
   # origin/<dest> always exists here (fetched before checkout); a local <dest> branch may not
@@ -166,6 +174,19 @@ def open-diff [dest_branch: string, mode?: string] {
   match $mode {
     "nvim" => { ^nvim -c $"CodeDiff ($range)" }
     "hunk" => { ^hunk $range }
+    "vs" => {
+      # Visual Studio has no CLI for a branch-range diff (devenv /Diff only
+      # compares two files), so open the solution and use the IDE's built-in
+      # branch compare, which the printed hint walks through. The worktree
+      # already has the source branch checked out and origin/<dest> fetched,
+      # so the compare target is ready to pick.
+      if not (devenv is-installed) {
+        log warning "Visual Studio isn't available on this machine"
+        return
+      }
+      print $"To see the full diff in Visual Studio: Git > Manage Branches > right-click 'origin/($dest_branch)' > Compare with Current Branch"
+      devenv solution
+    }
     "none" | "" | null => {}
     _ => { log warning $"Unknown mode '($mode)', skipping diff" }
   }
@@ -179,7 +200,7 @@ def open-diff [dest_branch: string, mode?: string] {
 # To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
 export def --env review [
   pr_url: string # Bitbucket PR URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
-  --mode: string@"nu-complete review-modes" # Diff tool to open after checkout: nvim, hunk or none. Prompts when omitted
+  --mode: string@"nu-complete review-modes" # Diff tool to open after checkout: nvim, hunk, vs (Windows only) or none. Prompts when omitted
 ] {
   let pr = parse pr-url $pr_url
 

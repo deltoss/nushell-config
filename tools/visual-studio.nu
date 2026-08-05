@@ -1,6 +1,14 @@
 use "../custom-commands/fzf-helpers.nu" ['parse fzf']
 use "../custom-commands/start.nu"
 
+const vswhere_path = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+
+# Visual Studio is Windows-only; vswhere is its canonical locator.
+# Cheap path check (no process spawn) so callers can gate VS-only features
+export def "devenv is-installed" [] {
+  $nu.os-info.name == "windows" and ($vswhere_path | path exists)
+}
+
 # Sample usage:
 #   devenv MySolution.sln
 #   devenv MySolution.sln /build "Debug|Any CPU"
@@ -8,7 +16,7 @@ use "../custom-commands/start.nu"
 #   devenv MySolution.sln /clean
 export def --wrapped devenv [...rest] {
   let vsPath = (
-    ^'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+    ^$vswhere_path
     -latest
     -prerelease
     -property installationPath
