@@ -90,6 +90,7 @@ export def "parse pr-url" [pr_url: string] {
 # To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <pr-id> --force
 export def --env review [
   pr_url: string # Bitbucket PR URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
+  --mode: string # Diff tool to open after checkout: nvim, hunk or none. Prompts when omitted
 ] {
   let pr = parse pr-url $pr_url
 
@@ -137,6 +138,19 @@ export def --env review [
 
   print $"(ansi green)PR #($pr.id) checked out: ($source_branch) -> ($dest_branch)(ansi reset)"
   print $"(ansi green)Worktree: ($target_dir)(ansi reset)"
+
+  let mode = $mode | default {
+    [nvim hunk none] | input list "Open diff with:"
+  }
+
+  # origin/<dest> always exists here (fetched above); a local <dest> branch may not
+  let range = $"origin/($dest_branch)...HEAD"
+  match $mode {
+    "nvim" => { ^nvim -c $"CodeDiff ($range)" }
+    "hunk" => { ^hunk $range }
+    "none" | "" | null => {}
+    _ => { log warning $"Unknown mode '($mode)', skipping diff" }
+  }
 }
 
 # Raise a git pull request for the current repository
