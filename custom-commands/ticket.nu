@@ -7,6 +7,11 @@ def jira-token [] {
   op-secret JIRABASE64AUTHTOKEN "op://Work/Atlassian - Work/Scripting - Jira"
 }
 
+# Jira base URL, from 1Password (or $env.JIRABASEURL when set)
+def jira-base-url [] {
+  op-secret JIRABASEURL "op://Work/Atlassian - Work/Base URL"
+}
+
 # Get ticket information from current branch
 export def info [] {
   let current_branch = ^git rev-parse --abbrev-ref HEAD
@@ -48,7 +53,7 @@ export def list [
   (http post --content-type application/json --headers {
     accept: application/json
     authorization:$"Basic (jira-token)"
-  } $"($env.JIRABASEURL)/rest/api/3/search/jql?jql" {
+  } $"(jira-base-url)/rest/api/3/search/jql?jql" {
     "jql": $jql,
     "fields": [
       "summary",
