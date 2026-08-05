@@ -38,6 +38,18 @@ export def zjn [] {
 # tab has a useless default name ("Tab #1" etc) or starts with an emoji,
 # which means it was auto-renamed. Manually named tabs are left alone.
 if 'ZELLIJ' in $env {
+  # Programs (pi, nvim, ...) overwrite the pane title and zellij restores the
+  # default one on exit, so re-assert it before every prompt. This is just an
+  # escape sequence, no subprocess, so it's cheap enough to run every time.
+  $env.config.hooks.pre_prompt = (
+    $env.config.hooks.pre_prompt? | default [] | append {||
+      let folder = ($env.PWD | path basename)
+      if $folder != '' {
+        print --no-newline $"\e]2;📂 ($folder)\u{7}"
+      }
+    }
+  )
+
   $env.config.hooks.env_change.PWD = (
     $env.config.hooks.env_change.PWD? | default [] | append {||
       let focused = (
@@ -51,7 +63,6 @@ if 'ZELLIJ' in $env {
       let folder = ($env.PWD | path basename)
       let label = $"📂 ($folder)"
       if $folder != '' and ($focused =~ '^([Tt]ab|\p{Extended_Pictographic})') {
-        print --no-newline $"\e]2;($label)\u{7}" # Prints OSC 2 for pane renaming
         ^zellij action rename-tab $label
       }
     }
