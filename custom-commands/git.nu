@@ -1,5 +1,3 @@
-use ./git-helpers.nu [repo-folder repo-info parse-git-url]
-
 # Bring up interactive menu for custom git operations
 export def menu [] {
   print $"(ansi bo)(ansi cyan)b(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)B(ansi reset)]ranch"
@@ -123,9 +121,7 @@ export def "log table" --wrapped [
   ]
 
   ^git log ...$args
-  | inspect
   | split row "¦¦¦"
-  | inspect
   | split column "»¦«" commit date name branch message
   | str trim # Removes newline characters proceeding each record
   | drop 1 # Removes last empty record

@@ -56,7 +56,7 @@ export def --env menu []: string -> nothing, list<string> -> nothing {
         break
       }
       ['v', []] => {
-        $selections | inspect | par-each {|selection|
+        $selections | par-each {|selection|
           devenv $selection
         }
         break
