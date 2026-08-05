@@ -114,6 +114,31 @@ def ensure-bare-clone [bare_dir: string, clone_url: string] {
   ^git -C $bare_dir config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 }
 
+# Turn a PR title into a filesystem-friendly folder name fragment
+def slugify [text: string] {
+  $text
+    | str downcase
+    | str replace --all --regex '[^a-z0-9]+' '-'
+    | str substring 0..49
+    | str trim --char '-'
+}
+
+# Find the PR's existing worktree folder (so a retitled PR reuses it),
+# or derive a fresh `<id>-<title-slug>` name from the current title
+def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
+  let existing = if ($repo_dir | path exists) {
+    glob ($repo_dir | path join $"($pr_id)-*")
+  } else {
+    []
+  }
+
+  if ($existing | is-not-empty) {
+    $existing | first
+  } else {
+    $repo_dir | path join $"($pr_id)-(slugify $title)"
+  }
+}
+
 # Add a worktree for the branch if it isn't there yet
 def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
   if ($target_dir | path exists) {
@@ -144,10 +169,10 @@ def open-diff [dest_branch: string, mode?: string] {
 
 # Check out a Bitbucket pull request into a dedicated worktree under ~/PRs.
 # Clones the repo once per repository (bare clone at ~/PRs/<repo>/.bare), then
-# adds a worktree per PR (~/PRs/<repo>/<pr-id>), so reviewing more PRs of the
-# same repo never re-clones. Re-running for the same PR syncs the worktree to
-# the latest commits instead.
-# To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <pr-id> --force
+# adds a worktree per PR (~/PRs/<repo>/<pr-id>-<title-slug>), so reviewing more
+# PRs of the same repo never re-clones. Re-running for the same PR syncs the
+# worktree to the latest commits instead.
+# To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
 export def --env review [
   pr_url: string # Bitbucket PR URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
   --mode: string # Diff tool to open after checkout: nvim, hunk or none. Prompts when omitted
@@ -164,7 +189,7 @@ export def --env review [
 
   let repo_dir = (pr-reviews-folder | path join $pr.repository)
   let bare_dir = ($repo_dir | path join ".bare")
-  let target_dir = ($repo_dir | path join $pr.id)
+  let target_dir = pr-target-dir $repo_dir $pr.id $bb_pr.title
 
   ensure-bare-clone $bare_dir $"git@bitbucket.org:($pr.workspace)/($pr.repository).git"
 
