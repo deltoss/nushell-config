@@ -126,7 +126,7 @@ def ensure-bare-clone [bare_dir: string, clone_url: string] {
 # Turn a PR title into a filesystem-friendly folder name fragment
 def slugify [text: string] {
   $text
-    | str downcase
+    | str lowercase
     | str replace --all --regex '[^a-z0-9]+' '-'
     | str substring 0..49
     | str trim --char '-'
