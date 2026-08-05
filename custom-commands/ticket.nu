@@ -1,10 +1,11 @@
 use ../tools/fzf.nu *
 use ../tools/1password.nu [op-secret]
+use ./atlassian-helpers.nu [basic-token]
 
-# Basic-auth token for the Jira API, from 1Password
+# Basic-auth token for the Jira API, built from 1Password
 # (or $env.JIRABASE64AUTHTOKEN when set)
 def jira-token [] {
-  op-secret JIRABASE64AUTHTOKEN "op://Work/Atlassian - Work/Scripting - Jira"
+  basic-token JIRABASE64AUTHTOKEN "op://Work/Atlassian - Work/Scripting - Jira"
 }
 
 # Jira base URL, from 1Password (or $env.JIRABASEURL when set)
