@@ -13,7 +13,7 @@ export def --wrapped yp [...args] {
   ^yazi ...$args --cwd-file $tmp
   let cwd = (open $tmp)
 	rm -fp $tmp
-  if ($cwd | is-empty) and ($cwd | path exists) {
+  if ($cwd | is-empty) or not ($cwd | path exists) {
     null
   } else {
     $cwd | path expand

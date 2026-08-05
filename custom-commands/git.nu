@@ -136,7 +136,7 @@ export def "log table" --wrapped [
 export def "log menu" --wrapped [
   ...rest
 ] {
-  let $selection = select-branch --extra ["  HEAD", "  --all"]
+  let $selection = (select branch --extra ["  HEAD", "  --all"])
   if ($selection | is-empty) {
     return
   }

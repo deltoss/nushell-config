@@ -24,7 +24,7 @@ export def "select workspace" [] {
   } else if (($workspaces | length) == 1) {
     $workspaces | first
   } else {
-    let selected_workspace = $workspaces | each {|row| $"($row.name) \(($row.slug)\)"} | str join | fzf
+    let selected_workspace = $workspaces | each {|row| $"($row.name) \(($row.slug)\)"} | str join "\n" | fzf
     if ($selected_workspace | is-empty) {
       return
     }
