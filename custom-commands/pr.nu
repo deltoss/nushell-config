@@ -177,7 +177,7 @@ def open-diff [dest_branch: string, mode?: string] {
   }
 
   # origin/<dest> always exists here (fetched before checkout); a local <dest> branch may not
-  let range = $"origin/($dest_branch)...HEAD"
+  let range = $"origin/($dest_branch)..." # Note we don't do ...HEAD so it compares against the working directory. Useful so LSPs may kick-in properly
   match $mode {
     "nvim" => { ^nvim -c $"CodeDiff ($range)" }
     "hunk" => { ^hunk $range }
