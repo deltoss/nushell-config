@@ -2,55 +2,16 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
-use ./atlassian-helpers.nu [bitbucket-basic-token]
+use ./bitbucket.nu
 
-# Perform an authenticated GET against the Bitbucket Cloud v2 API
-def bitbucket-get [path: string] {
-  http get --headers {
-    accept: application/json
-    authorization: $"Basic (bitbucket-basic-token)"
-  } $"https://api.bitbucket.org/2.0/($path)"
-}
-
-export def "get workspaces" [] {
-  bitbucket-get "user/permissions/workspaces"
-    | get values
-    | select workspace.uuid workspace.slug workspace.name
-    | rename id slug name
-}
-
-export def "select workspace" [] {
-  let workspaces = get workspaces
-  if ($workspaces | is-empty) {
-    return
-  } else if (($workspaces | length) == 1) {
-    $workspaces | first
-  } else {
-    let selected_workspace = $workspaces | each {|row| $"($row.name) \(($row.slug)\)"} | str join | fzf
-    if ($selected_workspace | is-empty) {
-      return
-    }
-    let slug = $selected_workspace | parse "{name} ({slug})" | get slug | first
-    $workspaces | where slug == $slug | first
+# Everything the review flow needs about a pull request, whichever host it lives on.
+# Supporting another host means writing a `<host>.nu` with a `pr-info` command
+# returning this same record, then adding an arm here
+def pr-info [pr_url: string] {
+  match ($pr_url | url parse | get host) {
+    "bitbucket.org" => (bitbucket pr-info $pr_url)
+    $host => (error make {msg: $"pr review doesn't support ($host) yet"})
   }
-}
-
-export def "get repositories" [
-  # Workspace name or slug
-  workspace?:string
-  # Optional query to filter results by repository name
-  query?:string
-] {
-  let workspace = $workspace | default --empty (select workspace | get slug)
-  let full_query = if ($query | is-not-empty) {
-    "&q=" + ($"name~\"($query)\"" | url encode)
-  } else {
-    ""
-  }
-
-  bitbucket-get $"repositories/($workspace | url encode)?role=contributor($full_query)"
-    | get values
-    | select name slug
 }
 
 export def url [
@@ -79,27 +40,6 @@ export def url [
     },
     _ => null
   }
-}
-
-# Parse a Bitbucket PR URL into its workspace, repo slug and PR id
-export def "parse pr-url" [pr_url: string] {
-  let parsed = $pr_url
-    | parse --regex 'bitbucket\.org\/(?<workspace>[^\/]+)\/(?<repository>[^\/]+)\/pull-requests\/(?<id>\d+)'
-  if ($parsed | is-empty) {
-    error make {msg: $"Not a recognizable Bitbucket PR URL: ($pr_url)"}
-  }
-  $parsed | first
-}
-
-export def "get pull-request" [
-  # Workspace name or slug
-  workspace: string
-  # Repository slug
-  repository: string
-  # Pull request id
-  id: string
-] {
-  bitbucket-get $"repositories/($workspace)/($repository)/pullrequests/($id)"
 }
 
 # Clone the repo as a bare clone if it isn't there yet.
@@ -138,11 +78,7 @@ def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
     []
   }
 
-  if ($existing | is-not-empty) {
-    $existing | first
-  } else {
-    $repo_dir | path join $"($pr_id)-(slugify $title)"
-  }
+  $existing | get --optional 0 | default ($repo_dir | path join $"($pr_id)-(slugify $title)")
 }
 
 # Add a worktree for the branch if it isn't there yet
@@ -161,10 +97,6 @@ def available-review-modes [] {
   } else {
     [nvim, hunk]
   }
-}
-
-def "nu-complete review-modes" [] {
-  available-review-modes
 }
 
 # `devenv solution` is a Nushell command, so a fresh shell has to import it first.
@@ -227,43 +159,36 @@ def open-diff [dest_branch: string, worktree: string, modes?: list<string>] {
   }
 }
 
-# Check out a Bitbucket pull request into a dedicated worktree under ~/PRs.
+# Check out a pull request into a dedicated worktree under ~/PRs.
 # Clones the repo once per repository (bare clone at ~/PRs/<repo>/.bare), then
 # adds a worktree per PR (~/PRs/<repo>/<pr-id>-<title-slug>), so reviewing more
 # PRs of the same repo never re-clones. Re-running for the same PR syncs the
 # worktree to the latest commits instead.
 # To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
 export def --env review [
-  pr_url: string # Bitbucket PR URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
-  --mode: list<string>@"nu-complete review-modes" # Diff tools to open after checkout. Prompts when omitted
+  pr_url: string # Pull request URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
+  --mode: list<string>@available-review-modes # Diff tools to open after checkout. Prompts when omitted
 ] {
-  let pr = parse pr-url $pr_url
+  log info $"Fetching ($pr_url)..."
+  let pr = pr-info $pr_url
 
-  log info $"Fetching PR #($pr.id) from Bitbucket..."
-  let bb_pr = get pull-request $pr.workspace $pr.repository $pr.id
-  if $bb_pr.source.repository.full_name != $bb_pr.destination.repository.full_name {
-    error make {msg: "pr review doesn't support pull requests raised from a fork yet"}
-  }
-  let source_branch = $bb_pr.source.branch.name
-  let dest_branch = $bb_pr.destination.branch.name
+  let repo_dir = pr-reviews-folder | path join $pr.repository
+  let bare_dir = $repo_dir | path join ".bare"
+  let target_dir = pr-target-dir $repo_dir $pr.id $pr.title
 
-  let repo_dir = (pr-reviews-folder | path join $pr.repository)
-  let bare_dir = ($repo_dir | path join ".bare")
-  let target_dir = pr-target-dir $repo_dir $pr.id $bb_pr.title
+  ensure-bare-clone $bare_dir $pr.clone_url
 
-  ensure-bare-clone $bare_dir $"git@bitbucket.org:($pr.workspace)/($pr.repository).git"
+  print $"(ansi green)Fetching latest '($pr.source_branch)' and '($pr.dest_branch)'...(ansi reset)"
+  ^git -C $bare_dir fetch origin $pr.source_branch $pr.dest_branch
 
-  print $"(ansi green)Fetching latest '($source_branch)' and '($dest_branch)'...(ansi reset)"
-  ^git -C $bare_dir fetch origin $source_branch $dest_branch
-
-  ensure-worktree $bare_dir $target_dir $source_branch
+  ensure-worktree $bare_dir $target_dir $pr.source_branch
   cd $target_dir
-  ^git reset --hard $"origin/($source_branch)"
+  ^git reset --hard $"origin/($pr.source_branch)"
 
-  print $"(ansi green)PR #($pr.id) checked out: ($source_branch) -> ($dest_branch)(ansi reset)"
+  print $"(ansi green)PR #($pr.id) checked out: ($pr.source_branch) -> ($pr.dest_branch)(ansi reset)"
   print $"(ansi green)Worktree: ($target_dir)(ansi reset)"
 
-  open-diff $dest_branch $target_dir $mode
+  open-diff $pr.dest_branch $target_dir $mode
 }
 
 # Raise a git pull request for the current repository
