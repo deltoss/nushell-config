@@ -2,19 +2,13 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
-use ./atlassian-helpers.nu [basic-token]
-
-# Basic-auth token for the Bitbucket API, built from 1Password
-# (or $env.BITBUCKETBASE64AUTHTOKEN when set)
-def bitbucket-token [] {
-  basic-token BITBUCKETBASE64AUTHTOKEN "op://Work/Atlassian - Work/Scripting - BitBucket"
-}
+use ./atlassian-helpers.nu [bitbucket-basic-token]
 
 # Perform an authenticated GET against the Bitbucket Cloud v2 API
 def bitbucket-get [path: string] {
   http get --headers {
     accept: application/json
-    authorization: $"Basic (bitbucket-token)"
+    authorization: $"Basic (bitbucket-basic-token)"
   } $"https://api.bitbucket.org/2.0/($path)"
 }
 
@@ -136,7 +130,10 @@ def slugify [text: string] {
 # or derive a fresh `<id>-<title-slug>` name from the current title
 def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
   let existing = if ($repo_dir | path exists) {
-    glob ($repo_dir | path join $"($pr_id)-*")
+    ls --short-names $repo_dir
+      | where type == dir and ($it.name | str starts-with $"($pr_id)-")
+      | get name
+      | each {|name| $repo_dir | path join $name }
   } else {
     []
   }
@@ -160,9 +157,9 @@ def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
 # Visual Studio is Windows-only, so offer it as a diff tool only where installed
 def available-review-modes [] {
   if (devenv is-installed) {
-    [nvim, hunk, vs, none]
+    [nvim, hunk, vs]
   } else {
-    [nvim, hunk, none]
+    [nvim, hunk]
   }
 }
 
@@ -170,28 +167,63 @@ def "nu-complete review-modes" [] {
   available-review-modes
 }
 
-# Open the checked-out PR diff in the chosen tool, prompting if none was given
-def open-diff [dest_branch: string, mode?: string] {
-  let mode = $mode | default {
-    available-review-modes | input list "Open diff with:"
+# `devenv solution` is a Nushell command, so a fresh shell has to import it first.
+# zellij strips '\' from the args it forwards after '--', so the path has to use
+# forward slashes; Nushell accepts those on Windows anyway.
+def vs-launch-command [] {
+  let script = $nu.default-config-dir | path join tools visual-studio.nu | str replace --all '\' '/'
+  [nu -c $"use '($script)' ['devenv solution']; devenv solution"]
+}
+
+# The external command each mode runs, as [exe, ...args]. Null when unsupported.
+def diff-command [mode: string, range: string] {
+  match $mode {
+    "nvim" => [nvim -c $"CodeDiff ($range)"]
+    "hunk" => [hunk $range]
+    "vs" => {
+      if (devenv is-installed) {
+        vs-launch-command
+      } else {
+        log warning "Visual Studio isn't available on this machine"
+        null
+      }
+    }
+    _ => { log warning $"Unknown mode '($mode)', skipping diff"; null }
   }
+}
+
+# Visual Studio can't take a branch diff from the CLI, so tell the user where to click
+def print-vs-hint [dest_branch: string] {
+  print $"(ansi yellow)Visual Studio can't open a branch diff from the command line. To see the full diff:(ansi reset)"
+  print $"(ansi bo)(ansi cyan)Git(ansi reset) > (ansi bo)(ansi cyan)Manage Branches(ansi reset) > right-click (ansi bo)(ansi green)origin/($dest_branch)(ansi reset) > (ansi bo)(ansi cyan)Compare with Current Branch(ansi reset)"
+}
+
+# Open the checked-out PR diff in the chosen tools, prompting if none were given.
+# Inside zellij each tool gets its own stacked pane rooted at the worktree, so
+# several can be open at once; the calling pane stays free. Outside zellij the
+# tools run one after another instead.
+def open-diff [dest_branch: string, worktree: string, modes?: list<string>] {
+  let modes = $modes
+    | default { available-review-modes | input list --multi "Open diff with (space to pick, enter to confirm):" }
+    | default []
+    | where {|mode| $mode not-in ["" "none" null] }
 
   # origin/<dest> always exists here (fetched before checkout); a local <dest> branch may not
   let range = $"origin/($dest_branch)..." # Note we don't do ...HEAD so it compares against the working directory. Useful so LSPs may kick-in properly
-  match $mode {
-    "nvim" => { ^nvim -c $"CodeDiff ($range)" }
-    "hunk" => { ^hunk $range }
-    "vs" => {
-      if not (devenv is-installed) {
-        log warning "Visual Studio isn't available on this machine"
-        return
-      }
-      print $"(ansi yellow)Visual Studio can't open a branch diff from the command line. To see the full diff:(ansi reset)"
-      print $"(ansi bo)(ansi cyan)Git(ansi reset) > (ansi bo)(ansi cyan)Manage Branches(ansi reset) > right-click (ansi bo)(ansi green)origin/($dest_branch)(ansi reset) > (ansi bo)(ansi cyan)Compare with Current Branch(ansi reset)"
-      devenv solution
+  let in_zellij = $env.ZELLIJ? | is-not-empty
+
+  for mode in $modes {
+    let command = diff-command $mode $range
+    if ($command | is-empty) { continue }
+    if $mode == "vs" { print-vs-hint $dest_branch }
+
+    if $in_zellij {
+      (^zellij action new-pane
+        --cwd $worktree --stacked --close-on-exit --name $mode
+        -- ...$command) | ignore
+    } else {
+      run-external ($command | first) ...($command | skip 1)
     }
-    "none" | "" | null => {}
-    _ => { log warning $"Unknown mode '($mode)', skipping diff" }
   }
 }
 
@@ -203,7 +235,7 @@ def open-diff [dest_branch: string, mode?: string] {
 # To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
 export def --env review [
   pr_url: string # Bitbucket PR URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
-  --mode: string@"nu-complete review-modes" # Diff tool to open after checkout: nvim, hunk, vs (Windows only) or none. Prompts when omitted
+  --mode: list<string>@"nu-complete review-modes" # Diff tools to open after checkout. Prompts when omitted
 ] {
   let pr = parse pr-url $pr_url
 
@@ -231,7 +263,7 @@ export def --env review [
   print $"(ansi green)PR #($pr.id) checked out: ($source_branch) -> ($dest_branch)(ansi reset)"
   print $"(ansi green)Worktree: ($target_dir)(ansi reset)"
 
-  open-diff $dest_branch $mode
+  open-diff $dest_branch $target_dir $mode
 }
 
 # Raise a git pull request for the current repository

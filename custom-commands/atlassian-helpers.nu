@@ -1,22 +1,41 @@
 use ../tools/1password.nu [op-secret]
 
+# Every Atlassian credential lives on the same 1Password item; only the field differs
+const ITEM = "op://Work/Atlassian - Work"
+
 # Atlassian account username (email), shared by the Jira and Bitbucket APIs
 def username [] {
-  op-secret ATLASSIANUSERNAME "op://Work/Atlassian - Work/username"
+  op-secret ATLASSIANUSERNAME $"($ITEM)/username"
 }
 
-# Build an HTTP Basic auth token for an Atlassian API key stored in
-# 1Password: base64 of username:apikey. An already-set env var takes
-# priority as a prebuilt-token override
-export def basic-token [
-  env_key: string # Environment variable holding a prebuilt base64 token
-  api_key_ref: string # 1Password reference to the API key, e.g. op://Vault/Item/Field
-] {
-  let override = $env | get --optional $env_key
-  if ($override | is-not-empty) {
-    return $override
-  }
+# Atlassian site base URL, e.g. https://<site>.atlassian.net
+export def base-url [] {
+  op-secret JIRABASEURL $"($ITEM)/Base URL"
+}
 
-  let api_key = ^op read $api_key_ref | str trim
+# Raw Jira API key, from 1Password (or $env.JIRAAPIKEY when set)
+export def jira-api-key [] {
+  op-secret JIRAAPIKEY $"($ITEM)/Scripting - Jira"
+}
+
+# Raw Bitbucket API key, from 1Password (or $env.BITBUCKETAPIKEY when set)
+export def bitbucket-api-key [] {
+  op-secret BITBUCKETAPIKEY $"($ITEM)/Scripting - BitBucket"
+}
+
+# Basic-auth token for the Jira API, built from the API key
+# (or $env.JIRABASE64AUTHTOKEN when set as a prebuilt override)
+export def jira-basic-token [] {
+  $env | get --optional JIRABASE64AUTHTOKEN | default --empty { basic-token (jira-api-key) }
+}
+
+# Basic-auth token for the Bitbucket API, built from the API key
+# (or $env.BITBUCKETBASE64AUTHTOKEN when set as a prebuilt override)
+export def bitbucket-basic-token [] {
+  $env | get --optional BITBUCKETBASE64AUTHTOKEN | default --empty { basic-token (bitbucket-api-key) }
+}
+
+# HTTP Basic auth credentials for the Atlassian APIs: base64 of username:apikey
+def basic-token [api_key: string] {
   $"(username):($api_key)" | encode base64
 }
