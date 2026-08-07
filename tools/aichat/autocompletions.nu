@@ -6,37 +6,37 @@ module completions {
   }
 
   def "nu-complete aichat model" [] {
-    ^aichat --list-models |
+    ^aichat --list-models
     | lines 
     | parse "{value}" 
   }
 
   def "nu-complete aichat role" [] {
-    ^aichat --list-roles |
+    ^aichat --list-roles
     | lines 
     | parse "{value}" 
   }
 
   def "nu-complete aichat session" [] {
-    ^aichat --list-sessions |
+    ^aichat --list-sessions
     | lines 
     | parse "{value}" 
   }
 
   def "nu-complete aichat agent" [] {
-    ^aichat --list-agents |
+    ^aichat --list-agents
     | lines 
     | parse "{value}" 
   }
 
   def "nu-complete aichat rag" [] {
-    ^aichat --list-rags |
+    ^aichat --list-rags
     | lines 
     | parse "{value}" 
   }
 
   def "nu-complete aichat macro" [] {
-    ^aichat --list-macros |
+    ^aichat --list-macros
     | lines 
     | parse "{value}" 
   }

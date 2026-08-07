@@ -17,12 +17,12 @@ This is a personal Nushell configuration repository (`~/.config/nushell`). All f
 **Entry points:** Nushell loads `env.nu` first (environment variables, shell settings), then `config.nu` (sources everything else).
 
 **`config.nu` load order:**
-1. `keybinds.nu` — custom keybindings
-2. `tools/tools.nu` — external tool integrations (`source` for env-modifying tools, `use` for command-providing tools)
-3. `custom-completions/custom-completions.nu` — tab completions from `nu_scripts` subtree + local completions
-4. `custom-commands/` — user-facing commands loaded via `mod.nu` as modules
-5. `sourced/sourced.nu` — zoxide override, worktrunk helpers
-6. `aliases/aliases.nu` — git aliases + git-wt alias
+1. `tools/tools.nu` — external tool integrations (`source` for env-modifying tools, `use` for command-providing tools; this is also where `git-wt`, `worktrunk`, `zoxide`, etc. are wired up)
+2. `custom-commands/` — user-facing commands loaded via `mod.nu` as modules
+3. `keybinds.nu`, `custom-completions/custom-completions.nu`, `aliases/aliases.nu` — only sourced `if $nu.is-interactive`
+4. A theme (`nu_scripts/themes/nu-themes/*`) is applied last
+
+Separately, `autoload/` is Nushell's user-autoload directory (see its own README): it loads automatically after `config.nu`, independently of the load order above, and is used to override vendor scripts (e.g. the zoxide override).
 
 **Key distinction — `tools/` vs `custom-commands/`:**
 - `tools/` wraps external CLI tools and sets up their environment. These are loaded via `source` (for env vars) or `use` (for commands).

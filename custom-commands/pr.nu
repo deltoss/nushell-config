@@ -4,16 +4,6 @@ use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
 use ./bitbucket.nu
 
-# Everything the review flow needs about a pull request, whichever host it lives on.
-# Supporting another host means writing a `<host>.nu` with a `pr-info` command
-# returning this same record, then adding an arm here
-def pr-info [pr_url: string] {
-  match ($pr_url | url parse | get host) {
-    "bitbucket.org" => (bitbucket pr-info $pr_url)
-    $host => (error make {msg: $"pr review doesn't support ($host) yet"})
-  }
-}
-
 export def url [
   dest_branch?: string # Destination branch to create a pull request for
   repo_info?: record # The repo information
