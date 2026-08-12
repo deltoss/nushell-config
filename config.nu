@@ -18,10 +18,15 @@ source ./tools/tools.nu
 
 use ./custom-commands/ *
 
+# Aliases and `extern` completions are parse-time definitions.
+# They can't be wrapped in a `if $nu.is-interactive`. It'd silently discards
+# every alias and completion. Keep them at top level.
+source ./custom-completions/custom-completions.nu
+source ./aliases/aliases.nu
+
 if $nu.is-interactive {
+  # Runtime `$env.config` mutation, unaffected by block scoping.
   source ./keybinds.nu
-  source ./custom-completions/custom-completions.nu
-  source ./aliases/aliases.nu
 }
 
 # For preview of themes, see https://github.com/nushell/nu_scripts/blob/main/themes/screenshots/README.md
