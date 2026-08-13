@@ -170,3 +170,27 @@ export def "review diffs" [
     ^aichat --session $session_name --file $file $prompt
   }
 }
+
+# Download a model file into the local model directory.
+@example "grab the turbo model for whisper.cpp" { ai get-model https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin }
+@example "a small English-only model for quick tests" { ai get-model https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en-q5_1.bin }
+@example "a GGUF model for llama.cpp" { ai get-model https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf }
+@example "store it somewhere other than ~/models" { ai get-model https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en-q5_1.bin --dir D:/models }
+export def get-model [
+  url: string
+  --dir: string = "~/models"
+] {
+  let model_dir = ($dir | path expand)
+  mkdir $model_dir
+
+  let filename = ($url | url parse | get path | path basename)
+  let dest = ($model_dir | path join $filename)
+
+  if ($dest | path exists) {
+    print $"already have ($filename)"
+    return $dest
+  }
+
+  http get $url | save --progress $dest
+  $dest
+}
