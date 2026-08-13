@@ -92,9 +92,47 @@ export def "select file" --wrapped [
   | str trim
 }
 
+# Revisions and changed files, for commands that accept either.
+# nu_scripts has this as `nu-complete git files-or-refs`, but its completers are
+# module-private, so it's reimplemented here.
+# `sort: false` keeps branches ahead of files instead of interleaving them.
+def "nu-complete refs-or-files" [] {
+  # `--relative`: paths are repo-root-relative otherwise, so they wouldn't
+  # resolve when completing from a subdirectory. Same for `ls-files` below,
+  # which is cwd-relative already.
+  let changed = (^git diff --name-only --relative HEAD | lines)
+
+  {
+    options: { sort: false }
+    completions: (
+      ^git for-each-ref --format '%(refname:short)' refs/heads
+      | lines
+      | parse '{value}'
+      | insert description 'Local branch'
+      | append (
+        ^git for-each-ref --format '%(refname:lstrip=2)' refs/remotes
+        | lines
+        | parse '{value}'
+        | insert description 'Remote branch'
+      )
+      | append ([HEAD ORIG_HEAD] | parse '{value}' | insert description 'Ref')
+      | append ($changed | parse '{value}' | insert description 'Changed file')
+      | append (
+        # Tracked plus untracked-but-not-ignored, so the whole repo is reachable.
+        # Only files, no directories: prefix matching on full paths covers those.
+        ^git ls-files --cached --others --exclude-standard --deduplicate
+        | lines
+        | where $it not-in $changed
+        | parse '{value}'
+        | insert description 'File'
+      )
+    )
+  }
+}
+
 # Log with more readable formatting
 export def log --wrapped [
-  ...rest
+  ...rest: string@"nu-complete refs-or-files"
 ] {
   let $args = [
     '--graph',

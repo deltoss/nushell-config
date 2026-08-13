@@ -1,2 +1,0 @@
-# Configures Claude code to use Serena. See https://oraios.github.io/serena/02-usage/030_clients.html#claude-code
-export alias claude = ^claude --dangerously-skip-permissions --system-prompt="$(serena prompts print-cc-system-prompt-override)"

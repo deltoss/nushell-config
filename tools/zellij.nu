@@ -4,7 +4,8 @@ let layouts_dir = if ($env has 'ZELLIJ_CONFIG_DIR') {
   $'($env.XDG_CONFIG_HOME)/zellij/layouts'
 }
 
-export alias zj = ^zellij
+# No `^`: that would bypass the `extern zellij` completions from custom-completions.
+export alias zj = zellij
 
 export def zjq [] {
   ^zellij --layout $'($layouts_dir)/quick-launch.kdl'

@@ -6,9 +6,11 @@ use ./ripgrep.nu *
 use ./bat.nu *
 use ./visual-studio.nu *
 use ./agg.nu *
+use ./claude-code.nu *
 
 # Conditional imports based on OS
 use (if ($nu.os-info.name == "linux") { "./blkid.nu" } else { null })
+use (if ($nu.os-info.name == "windows") { "./msys2.nu" } else { null }) *
 
 source ./tv.nu
 source ./zoxide.nu

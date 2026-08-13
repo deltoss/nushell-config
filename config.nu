@@ -16,12 +16,16 @@
 
 source ./tools/tools.nu
 
-use ./custom-commands/ *
-
 # Aliases and `extern` completions are parse-time definitions.
 # They can't be wrapped in a `if $nu.is-interactive`. It'd silently discards
 # every alias and completion. Keep them at top level.
 source ./custom-completions/custom-completions.nu
+
+# Loaded after the completions on purpose: an `extern` and a `def` of the same name
+# are both plain declarations, so the last one parsed wins. The other way round,
+# `extern "git log"` from nu_scripts shadowed the `git log` command below.
+use ./custom-commands/ *
+
 source ./aliases/aliases.nu
 
 if $nu.is-interactive {
