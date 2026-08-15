@@ -26,15 +26,15 @@ export def menu [] {
 }
 
 def "new pane" [] {
-  ^zellij action new-pane --cwd $env.PWD --direction right | ignore
+  ^zellij action new-pane --cwd $env.PWD --direction right --name '' -- nu | ignore
 }
 
 def "new float" [] {
-  ^zellij action new-pane --cwd $env.PWD --floating --pinned true | ignore
+  ^zellij action new-pane --cwd $env.PWD --floating --pinned true --name '' -- nu | ignore
 }
 
 def "new stack" [] {
-  ^zellij action new-pane --cwd $env.PWD --stacked | ignore
+  ^zellij action new-pane --cwd $env.PWD --stacked --name '' -- nu | ignore
 }
 
 def "new tab" [] {
