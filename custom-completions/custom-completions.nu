@@ -25,5 +25,6 @@ use ./ya-completions.nu *
 use ./vultr-cli-completions.nu *
 use ./serena-completions.nu *
 use ./fabric-completions.nu *
+use ./kokoro-completions.nu *
 
 source (if ($nu.os-info.name == "windows") { "windows-completions.nu" } else { null })
