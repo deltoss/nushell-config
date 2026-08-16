@@ -11,6 +11,7 @@ if $nu.os-info.name == "linux" {
     ($nu.home-dir | path join ".local" "bin")
     ($nu.home-dir | path join ".cargo" "bin")
     ($nu.home-dir | path join ".bun" "bin")
+    ($nu.home-dir | path join ".deno" "bin")
     ($nu.home-dir | path join ".dotnet")
     ($nu.home-dir | path join ".dotnet" "tools")
     ($nu.home-dir | path join "go" "bin")
