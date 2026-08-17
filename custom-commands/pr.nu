@@ -2,7 +2,7 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
-use ./bitbucket.nu
+use ./bitbucket.nu [ pr-info ]
 
 export def url [
   dest_branch?: string # Destination branch to create a pull request for
