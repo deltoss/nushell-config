@@ -4,17 +4,20 @@ let layouts_dir = if ($env has 'ZELLIJ_CONFIG_DIR') {
   $'($env.XDG_CONFIG_HOME)/zellij/layouts'
 }
 
-# No `^`: that would bypass the `extern zellij` completions from custom-completions.
-export alias zj = zellij
+# Shortcut for zellij
+export alias zj = zellij # No `^`: that would bypass the `extern zellij` completions from custom-completions.
 
+# Launch zellij with quick-launch layout
 export def zjq [] {
   ^zellij --layout $'($layouts_dir)/quick-launch.kdl'
 }
 
+# Launch zellij with coding layout
 export def zjc [] {
   ^zellij --layout $'($layouts_dir)/coding.kdl'
 }
 
+# Launch zellij with configs layout
 export def zjC [] {
   let session = 'configs'
   let sessions = (^zellij list-sessions -s | complete | get stdout | lines)
@@ -25,6 +28,7 @@ export def zjC [] {
   }
 }
 
+# Launch zellij with notes layout
 export def zjn [] {
   let session = 'notes'
   let sessions = (^zellij list-sessions -s | complete | get stdout | lines)
