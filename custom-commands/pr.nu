@@ -101,7 +101,14 @@ def vs-launch-command [] {
 def diff-command [mode: string, range: string] {
   match $mode {
     "nvim" => [nvim -c $"CodeDiff ($range)"]
-    "hunk" => [hunk $range]
+    "hunk" => {
+      if $nu.os-info.name == "windows" {
+        # Zellij cannot launch npm's .cmd shim directly. So let Nushell resolve it.
+        [nu --commands $"^hunk diff ($range | to nuon)"]
+      } else {
+        [hunk diff $range]
+      }
+    }
     "vs" => {
       if (devenv is-installed) {
         vs-launch-command
