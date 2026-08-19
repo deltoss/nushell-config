@@ -102,12 +102,18 @@ def diff-command [mode: string, range: string] {
   match $mode {
     "nvim" => [nvim -c $"CodeDiff ($range)"]
     "hunk" => {
-      if $nu.os-info.name == "windows" {
-        # Zellij cannot launch npm's .cmd shim directly. So let Nushell resolve it.
-        [nu --commands $"^hunk diff ($range | to nuon)"]
-      } else {
-        [hunk diff $range]
-      }
+      # Hunk has no whitespace flag, so generate the patch with Git and let Hunk render it.
+      # See https://github.com/modem-dev/hunk/issues/794
+      # Use nushell to resolves Windows npm shims with hunk.
+      let target = $range | to nuon
+      let script = $"let patch = mktemp --suffix .patch
+try {
+  ^git diff --ignore-all-space --no-color ($target) | save --force $patch
+  ^hunk patch $patch
+} finally {
+  rm --force $patch
+}"
+      [nu --commands $script]
     }
     "vs" => {
       if (devenv is-installed) {
@@ -150,6 +156,12 @@ def open-diff [dest_branch: string, worktree: string, modes?: list<string>] {
       (^zellij action new-pane
         --cwd $worktree --stacked --close-on-exit --name $mode
         -- ...$command) | ignore
+
+      if $mode == "hunk" {
+        (^zellij action new-pane
+          --cwd $worktree --stacked --close-on-exit --name "🤖 Hunk AI"
+          -- nu) | ignore
+      }
     } else {
       run-external ($command | first) ...($command | skip 1)
     }
