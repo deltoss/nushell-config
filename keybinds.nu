@@ -18,7 +18,7 @@ $env.config.menus ++= [{
 }]
 
 $env.config.keybindings ++= [{
-  name: ide_completion_menu
+  name: ide_completion_menu_tab
   modifier: none
   keycode: tab
   mode: [emacs vi_insert]
@@ -32,7 +32,7 @@ $env.config.keybindings ++= [{
 }]
 
 $env.config.keybindings ++= [{
-  name: help_menu
+  name: help_menu_ctrl_p
   modifier: control
   keycode: char_p
   mode: [emacs vi_insert vi_normal]
