@@ -201,10 +201,18 @@ export def --env review [
 }
 
 # Raise a git pull request for the current repository
+# Runs $env.hooks.pre-pr-raise handlers in order. false cancels opening the page.
 export def main [dest_branch?: string]: nothing -> nothing {
   let $url = (url $dest_branch)
   if ($url | is-empty) {
     return
+  }
+  let hooks = $env.hooks?.pre-pr-raise? | default [] | append []
+  for hook in $hooks {
+    if (do $hook $url) == false {
+      log info "PR raise cancelled by pre-pr-raise hook."
+      return
+    }
   }
   start $url
 }
