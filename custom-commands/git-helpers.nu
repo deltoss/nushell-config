@@ -46,7 +46,7 @@ export def repo-info [] {
   let branch = (git branch --show-current | str trim)
 
   # Try GitHub
-  let github = ($remote_url | parse -r 'github\.com[:\/]([^\/:]+)\/([^.]+)\.git')
+  let github = ($remote_url | parse -r 'github\.com[:/]([^/:]+)/([^/]+)\.git$')
   if not ($github | is-empty) {
     return {
       organization: ($github | get capture0.0)
@@ -58,7 +58,7 @@ export def repo-info [] {
   }
 
   # Try Bitbucket
-  let bitbucket = ($remote_url | parse -r 'bitbucket\.org[:\/]([^\/:]+)\/([^.]+)\.git')
+  let bitbucket = ($remote_url | parse -r 'bitbucket\.org[:/]([^/:]+)/([^/]+)\.git$')
   if not ($bitbucket | is-empty) {
     return {
       organization: ($bitbucket | get capture0.0)
