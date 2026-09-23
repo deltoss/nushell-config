@@ -4,17 +4,21 @@ use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
 use ./bitbucket.nu [ pr-info ]
 
+def resolve-dest-branch [dest_branch?: string] {
+  $dest_branch | default {
+    git select branch | if ($in | is-not-empty) {
+      get branch | str replace '^origin\/' ''
+    }
+  }
+}
+
 export def url [
   dest_branch?: string # Destination branch to create a pull request for
   repo_info?: record # The repo information
 ] {
   let repo = $repo_info | default { repo-info }
   let src_branch = $repo.branch
-  let dest = $dest_branch | default {
-    git select branch | if ($in | is-not-empty) {
-      get branch | str replace '^origin\/' ''
-    }
-  }
+  let dest = resolve-dest-branch $dest_branch
 
   if ($dest | is-empty) {
     log info "Destination branch not selected. Quitting..."
@@ -100,7 +104,12 @@ def vs-launch-command [] {
 # The external command each mode runs, as [exe, ...args]. Null when unsupported.
 def diff-command [mode: string, range: string] {
   match $mode {
-    "nvim" => [nvim -c $"CodeDiff ($range)"]
+    "nvim" => [
+      nvim
+      # CodeDiff opens a new tab asynchronously; close the startup dashboard tab once it is ready.
+      -c "autocmd User CodeDiffOpen ++once lua vim.schedule(function() vim.cmd('1tabclose') end)"
+      -c $"CodeDiff ($range)"
+    ]
     "hunk" => {
       # Hunk has no whitespace flag, so generate the patch with Git and let Hunk render it.
       # See https://github.com/modem-dev/hunk/issues/794
@@ -124,6 +133,41 @@ try {
       }
     }
     _ => { log warning $"Unknown mode '($mode)', skipping diff"; null }
+  }
+}
+
+def open-hunk-pane [dest_branch: string, worktree: string] {
+  let range = $"origin/($dest_branch)..."
+  let command = diff-command "hunk" $range
+
+  if ($env.ZELLIJ? | is-not-empty) {
+    (^zellij action new-pane
+      --cwd $worktree --stacked --no-focus --close-on-exit --name hunk
+      -- ...$command) | ignore
+  } else {
+    run-external ($command | first) ...($command | skip 1)
+  }
+}
+
+export def self-review [dest_branch: string] {
+  let worktree = (^git rev-parse --show-toplevel | str trim)
+  ^git fetch origin $dest_branch
+
+  if ($env.ZELLIJ? | is-not-empty) {
+    let command = diff-command "nvim" $"origin/($dest_branch)..."
+    (^zellij action new-pane
+      --cwd $worktree --stacked --no-focus --close-on-exit --name nvim
+      -- ...$command) | ignore
+  }
+
+  open-hunk-pane $dest_branch $worktree
+
+  if ($env.ZELLIJ? | is-not-empty) {
+    (^zellij action new-pane
+      --cwd $worktree --stacked --no-focus --close-on-exit --name pi
+      -- pi "/skill:hunk-self-review") | ignore
+  } else {
+    ^pi "/skill:hunk-self-review"
   }
 }
 
@@ -201,15 +245,21 @@ export def --env review [
 }
 
 # Raise a git pull request for the current repository
-# Runs $env.hooks.pre-pr-raise handlers in order. false cancels opening the page.
+# Runs pre-pr-raise handlers with the URL and destination branch. Returning false cancels the page.
 export def main [dest_branch?: string]: nothing -> nothing {
-  let $url = (url $dest_branch)
+  let resolved_dest = resolve-dest-branch $dest_branch
+  if ($resolved_dest | is-empty) {
+    log info "Destination branch not selected. Quitting..."
+    return
+  }
+
+  let $url = (url $resolved_dest)
   if ($url | is-empty) {
     return
   }
   let hooks = $env.hooks?.pre-pr-raise? | default [] | append []
   for hook in $hooks {
-    if (do $hook $url) == false {
+    if (do $hook $url $resolved_dest) == false {
       log info "PR raise cancelled by pre-pr-raise hook."
       return
     }

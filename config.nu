@@ -17,13 +17,6 @@
 # Custom hooks. Nushell's own hooks live in $env.config.hooks
 $env.hooks = ($env.hooks? | default {})
 $env.hooks.pre-pr-raise = ($env.hooks.pre-pr-raise? | default [])
-$env.hooks.pre-pr-raise ++= [
-  {|_|
-    if (input "Do you want an AI review of your changes before raising the PR? [y/N] " | str trim | str lowercase) in ["y" "yes"] {
-      # TODO: Call `pr self-review` once implemented.
-    }
-  }
-]
 
 source ./tools/tools.nu
 
@@ -36,6 +29,17 @@ source ./custom-completions/custom-completions.nu
 # are both plain declarations, so the last one parsed wins. The other way round,
 # `extern "git log"` from nu_scripts shadowed the `git log` command below.
 use ./custom-commands/ *
+
+$env.hooks.pre-pr-raise ++= [
+  {|_, dest_branch|
+    if (input "Do you want an AI review of your changes before raising the PR? [y/N] " | str trim | str lowercase) in ["y" "yes"] {
+      pr self-review $dest_branch
+      if (input "Proceed with raising the PR? [y/N] " | str trim | str lowercase) not-in ["y" "yes"] {
+        return false
+      }
+    }
+  }
+]
 
 source ./aliases/aliases.nu
 
