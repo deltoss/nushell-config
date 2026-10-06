@@ -67,6 +67,9 @@ if $nu.os-info.name == "windows" {
   $env.ZELLIJ_CONFIG_DIR = $"($env.XDG_CONFIG_HOME)/zellij"
 }
 
+# Configure rider to use ~/.config/rider
+$env.RIDER_PROPERTIES = $home_dir | path join ".config" "rider" "idea.properties"
+
 # Configure Nushell command line editing experience to behave like vim.
 $env.config.edit_mode = 'vi'
 $env.config.cursor_shape.vi_insert = "blink_line"
