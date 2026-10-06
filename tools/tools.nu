@@ -5,6 +5,7 @@ use ./1password.nu *
 use ./ripgrep.nu *
 use ./bat.nu *
 use ./visual-studio.nu *
+use ./jetbrains-rider.nu *
 use ./agg.nu *
 use ./claude-code.nu *
 
