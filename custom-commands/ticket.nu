@@ -1,5 +1,5 @@
 use ../tools/fzf.nu *
-use ./atlassian-helpers.nu [jira-basic-token, base-url]
+use ./atlassian-helpers.nu [jira-basic-token, base-url, jira-account]
 
 # Get ticket information from current branch
 export def info [] {
@@ -25,43 +25,65 @@ export def open [] {
   }
 }
 
-# List available tickets
+# Fetch raw issues for both the table and the ticket picker
+def assigned-tickets [all: bool] {
+  let url = base-url | str trim --right --char '/'
+  let headers = {
+    accept: application/json
+    authorization: $"Basic (jira-basic-token)"
+  }
+  let account_id = jira-account | get accountId | str trim
+  if ($account_id | is-empty) or $account_id == "unknown" {
+    error make {msg: "Jira did not return a valid account ID"}
+  }
+
+  # WAS does not support currentUser(); use a quoted account ID instead
+  let user = $account_id | to json --raw
+  let additional_filter = if $all { "" } else { " AND statusCategory != Done" }
+  mut request = {
+    jql: ("(assignee = currentUser() OR assignee WAS " + $user + ")"
+      + $additional_filter
+      + " ORDER BY updated DESC, created ASC")
+    fields: [summary priority status]
+    maxResults: 50
+  }
+  mut issues = []
+
+  loop {
+    let page = http post --content-type application/json --headers $headers $"($url)/rest/api/3/search/jql" $request
+    $issues ++= $page.issues
+    let next_page = $page | get --optional nextPageToken
+    if ($page | get --optional isLast | default false) or ($next_page | is-empty) {
+      break
+    }
+    if $next_page == ($request | get --optional nextPageToken) {
+      error make {msg: "Jira returned a repeated pagination token"}
+    }
+    $request = ($request | upsert nextPageToken $next_page)
+  }
+
+  $issues
+}
+
+# List tickets currently or previously assigned to you as a Nushell table
 export def list [
   --all # Whether to show all tickets, including completed ones
 ] {
-  let additional_filter = if ($all) {
-    ""
-  } else {
-    " AND status NOT IN (Done,Closed,Resolved)"
+  assigned-tickets $all | each {|issue|
+    {
+      key: $issue.key
+      name: $issue.fields.summary
+      priority: ($issue | get --optional fields.priority.name | default "None")
+      status: $issue.fields.status.name
+    }
   }
-
-  let jql = ("(assignee = currentUser() OR assignee was currentUser() OR reporter = currentUser())"
-    + $additional_filter
-    + " ORDER BY updated DESC, created ASC")
-
-  (http post --content-type application/json --headers {
-    accept: application/json
-    authorization:$"Basic (jira-basic-token)"
-  } $"(base-url)/rest/api/3/search/jql?jql" {
-    "jql": $jql,
-    "fields": [
-      "summary",
-      "status",
-      "assignee",
-      "project",
-      "priority",
-      "updated",
-      "created"
-    ],
-    "maxResults": 50 # Hack for now. This assumes no pagination is needed.
-  } | get issues | select key fields self)
 }
 
 # Select a ticket from Jira list
 export def "menu select" [
   --all # Whether to show all tickets, including completed ones
 ] {
-  list --all=$all | fzf --format {|it| $"($it.key) - ($it.fields.summary)"}
+  assigned-tickets $all | fzf --format {|it| $"($it.key) - ($it.fields.summary)"}
 }
 
 # Open ticket in browser from current branch information

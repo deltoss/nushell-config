@@ -1,7 +1,17 @@
 use ../tools/1password.nu [op-secret]
+use ./cache-helpers.nu [cache-value]
 
 # Every Atlassian credential lives on the same 1Password item; only the field differs
 const ITEM = "op://Work/Atlassian - Work"
+
+# Explicit environment overrides take priority over the shared memory cache.
+def cached-value [env_key: string fetch: closure] {
+  let override = $env | get --optional $env_key
+  if ($override | is-not-empty) {
+    return $override
+  }
+  cache-value $env_key $fetch
+}
 
 # Atlassian account username (email), shared by the Jira and Bitbucket APIs
 def username [] {
@@ -10,7 +20,7 @@ def username [] {
 
 # Atlassian site base URL, e.g. https://<site>.atlassian.net
 export def base-url [] {
-  op-secret JIRABASEURL $"($ITEM)/Base URL"
+  cached-value JIRABASEURL { op-secret JIRABASEURL $"($ITEM)/Base URL" }
 }
 
 # Raw Jira API key, from 1Password (or $env.JIRAAPIKEY when set)
@@ -26,7 +36,15 @@ export def bitbucket-api-key [] {
 # Basic-auth token for the Jira API, built from the API key
 # (or $env.JIRABASE64AUTHTOKEN when set as a prebuilt override)
 export def jira-basic-token [] {
-  $env | get --optional JIRABASE64AUTHTOKEN | default --empty { basic-token (jira-api-key) }
+  cached-value JIRABASE64AUTHTOKEN { basic-token (jira-api-key) }
+}
+
+# Get the authenticated Jira account
+export def jira-account [] {
+  http get --headers {
+    accept: application/json
+    authorization: $"Basic (jira-basic-token)"
+  } $"(base-url | str trim --right --char '/')/rest/api/3/myself"
 }
 
 # Basic-auth token for the Bitbucket API, built from the API key
