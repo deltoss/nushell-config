@@ -2,7 +2,8 @@ use "../custom-commands/fzf-helpers.nu" ['parse fzf']
 use "../custom-commands/start.nu"
 
 # Prefer subcommands to bare paths. Use ./ for paths sharing their prefix.
-def "nu-complete rider" [spans: list<string>] {
+def "nu-complete rider" [place: record] {
+  let spans = $place.command
   if ($spans | length) != 2 { return null }
   let prefix = $spans | last | str lowercase
   let matches = [projects recent solution] | where {|name| $name | str starts-with $prefix}

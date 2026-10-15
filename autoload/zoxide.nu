@@ -1,6 +1,6 @@
 # Based on: https://www.nushell.sh/cookbook/custom_completers.html#zoxide-path-completions
-def "nu-complete zoxide path" [context: string] {
-  let parts = $context | str trim --left | split row " " | skip 1 | each { str lowercase }
+def "nu-complete zoxide path" [place: record] {
+  let parts = $place.command | skip 1 | each { str lowercase }
   let completions = (
     ^zoxide query --list --exclude $env.PWD -- ...$parts
       | lines
@@ -14,6 +14,7 @@ def "nu-complete zoxide path" [context: string] {
           }
           {
             value: ($dir | str substring $rem_start..),
+            display_override: $dir,
             description: $dir
           }
         }

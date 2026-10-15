@@ -12,10 +12,8 @@
 #   $nu.vendor-autoload-dirs
 
 # Tab completions: calls binary with COMPLETE=nu to get candidates.
-# Note: nushell's completion engine bypasses custom completers when the current
-# token starts with `-`, so flag completions (e.g. `wt switch --<TAB>`) don't
-# appear. Subcommand and value completions work. (nushell/nushell#14504)
-export def "nu-complete git-wt" [context: string] {
+# Nushell 0.116.1 also calls wrapped rest completers for flag-like tokens.
+export def "nu-complete git-wt" [place: record] {
     let worktrunk_bin = if ($env.WORKTRUNK_BIN? | is-not-empty) {
         $env.WORKTRUNK_BIN
     } else {
@@ -24,15 +22,8 @@ export def "nu-complete git-wt" [context: string] {
         ($external | get 0.path)
     }
 
-    let tokens = ($context | split row " " | where {|t| $t != "" })
-    let tokens = if ($context | str ends-with " ") {
-        $tokens | append ""
-    } else {
-        $tokens
-    }
-
     let result = (do {
-        with-env { COMPLETE: nu } { ^$worktrunk_bin -- ...$tokens }
+        with-env { COMPLETE: nu } { ^$worktrunk_bin -- ...$place.command }
     } | complete)
     if $result.exit_code != 0 { return [] }
 

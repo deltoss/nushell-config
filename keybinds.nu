@@ -17,6 +17,16 @@ $env.config.menus ++= [{
   }
 }]
 
+# Let the IDE completion popup use the terminal width for long paths
+# By default, it's set to 50
+$env.config.menus = ($env.config.menus | each {|menu|
+  if $menu.name == "ide_completion_menu" {
+    $menu | upsert type.max_completion_width (term size).columns
+  } else {
+    $menu
+  }
+})
+
 $env.config.keybindings ++= [{
   name: ide_completion_menu_tab
   modifier: none
