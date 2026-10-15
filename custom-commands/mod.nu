@@ -1,6 +1,7 @@
 export module ./search.nu
 export module ./git.nu
 export module ./worktree.nu
+export module ./jira.nu
 export module ./ticket.nu
 export module ./pr.nu
 export module ./bitbucket.nu

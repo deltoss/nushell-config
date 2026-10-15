@@ -47,6 +47,15 @@ export def jira-account [] {
   } $"(base-url | str trim --right --char '/')/rest/api/3/myself"
 }
 
+# Get the authenticated Jira account ID, rejecting missing or unknown IDs.
+export def jira-account-id [] {
+  let account_id = jira-account | get accountId | str trim
+  if ($account_id | is-empty) or $account_id == "unknown" {
+    error make {msg: "Jira did not return a valid account ID"}
+  }
+  $account_id
+}
+
 # Basic-auth token for the Bitbucket API, built from the API key
 # (or $env.BITBUCKETBASE64AUTHTOKEN when set as a prebuilt override)
 export def bitbucket-basic-token [] {
