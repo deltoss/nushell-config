@@ -2,6 +2,7 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
+use ../tools/jetbrains-rider.nu ['rider is-installed']
 use ./bitbucket.nu [ pr-info ]
 
 def resolve-dest-branch [dest_branch?: string] {
@@ -84,13 +85,11 @@ def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
   ^git -C $bare_dir worktree add $target_dir -B $branch $"origin/($branch)"
 }
 
-# Visual Studio is Windows-only, so offer it as a diff tool only where installed
 def available-review-modes [] {
-  if (devenv is-installed) {
-    [nvim, hunk, vs]
-  } else {
-    [nvim, hunk]
-  }
+  mut modes = [nvim hunk]
+  if (rider is-installed) { $modes ++= [rider] }
+  if (devenv is-installed) { $modes ++= [vs] }
+  $modes
 }
 
 # `devenv solution` is a Nushell command, so a fresh shell has to import it first.
@@ -99,6 +98,11 @@ def available-review-modes [] {
 def vs-launch-command [] {
   let script = $nu.default-config-dir | path join tools visual-studio.nu | str replace --all '\' '/'
   [nu -c $"use '($script)' ['devenv solution']; devenv solution"]
+}
+
+def rider-launch-command [] {
+  let script = $nu.default-config-dir | path join tools jetbrains-rider.nu | str replace --all '\' '/'
+  [nu -c $"use ($script | to nuon) ['rider solution']; rider solution"]
 }
 
 # The external command each mode runs, as [exe, ...args]. Null when unsupported.
@@ -123,6 +127,14 @@ try {
   rm --force $patch
 }"
       [nu --commands $script]
+    }
+    "rider" => {
+      if (rider is-installed) {
+        rider-launch-command
+      } else {
+        log warning "Rider isn't available on this machine"
+        null
+      }
     }
     "vs" => {
       if (devenv is-installed) {

@@ -1,6 +1,14 @@
 use "../custom-commands/fzf-helpers.nu" ['parse fzf']
 use "../custom-commands/start.nu"
 
+def rider-launcher [] {
+  which --all rider64 rider rider.sh | where type == external | get --optional path.0
+}
+
+export def "rider is-installed" [] {
+  rider-launcher | is-not-empty
+}
+
 # Prefer subcommands to bare paths. Use ./ for paths sharing their prefix.
 def "nu-complete rider" [place: record] {
   let spans = $place.command
@@ -18,7 +26,7 @@ def "nu-complete rider" [place: record] {
 @complete "nu-complete rider"
 export def --wrapped rider [...rest] {
   # Prefer the GUI launcher over scripts that launches console windows.
-  let launcher = (which --all rider64 rider rider.sh | where type == external | get --optional path.0)
+  let launcher = rider-launcher
   if ($launcher | is-empty) {
     error make { msg: "No Rider launcher found on PATH. Add Rider's bin directory or JetBrains Toolbox's shell scripts directory to PATH." }
   }
