@@ -1,5 +1,6 @@
 use ./git-helpers.nu [repo-folder, worktrees-folder]
 use ./git.nu ['select branch']
+use ../tools/fzf.nu ['fzf table']
 
 export def --env main [] {
   menu
@@ -77,20 +78,9 @@ export def list [] {
 }
 
 export def select [] {
-  let worktrees = list
-
-  let formatted_entries = $worktrees | each { |it|
+  list | fzf table --format {|it|
     $"($it.branch | fill -a l -w 40) ($it.commit_short | fill -a l -w 10) ($it.relative_path)"
-  }
-
-  let selected = $formatted_entries | str join "\n" | ^fzf
-
-  # fzf only gives us the selected string back
-  # Get the original worktree object from the selection
-  let selected_branch = $selected | str replace --regex '\s+.+\s+.+' '' | str trim
-  let selected_worktree = $worktrees | where branch == $selected_branch | first
-
-  $selected_worktree | default nothing
+  } --header="Git - Worktrees"
 }
 
 # Switch to the directory of a git worktree

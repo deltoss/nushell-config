@@ -79,6 +79,8 @@ export def --wrapped "fzf table" [
   table -> table
 ] {
   let data = $in
+  if ($data | is-empty) { return }
+
   let header_lines = if ($format | is-not-empty) {
     0
   } else {
@@ -88,24 +90,27 @@ export def --wrapped "fzf table" [
   let display = if ($format | is-not-empty) {
     $data | each $format | str join "\n"
   } else if ($columns | is-not-empty) {
-    $data | select ...$columns | to tsv
+    $data | to tsv --columns $columns
   } else {
     $data | to tsv
   }
 
   let is_multi = $rest | any { |it| $it == "--multi" or $it == "-m" }
 
-  let selected_indices = $display
+  let selection = $display
     # --accept-nth={n} gets the index of the selection
     | ^fzf $"--header-lines=($header_lines)" --accept-nth={n} ...$rest
-    | lines
+    | complete
 
-  if ($selected_indices | is-empty) {
-    return
+  # fzf: 1 = no match, 130 = cancelled with Esc or Ctrl-C.
+  # Both are normal picker outcomes, so return nothing instead of raising an error.
+  if $selection.exit_code in [1 130] { return }
+  if $selection.exit_code != 0 {
+    error make {msg: $"fzf failed: ($selection.stderr | str trim)"}
   }
 
-  let selected_indices = $selected_indices | into int | par-each { $in - $header_lines }
-  let result = $selected_indices | par-each {|idx| $data | get $idx }
+  let result = $selection.stdout | lines | into int
+    | each {|idx| $data | get ($idx - $header_lines) }
 
   if $is_multi {
     return $result

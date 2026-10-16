@@ -8,21 +8,26 @@ def "get folder" [] {
   }
 }
 
-# Run a program for stdin
-export def --env with []: string -> nothing, list<string> -> nothing {
+# Open plain paths or search hits containing path, line, and column fields.
+export def --env with []: string -> nothing, list<string> -> nothing, record -> nothing, table -> nothing {
   $in | menu
 }
 
 # Run a program for stdin interactively
-export def --env menu []: string -> nothing, list<string> -> nothing {
-  let $input = $in
+export def --env menu []: string -> nothing, list<string> -> nothing, record -> nothing, table -> nothing {
+  let input = $in
+  if ($input | is-empty) { return }
+
   let selections = match ($input | describe) {
-    "string" => ($input | split row "\n" | compact --empty)
-    "list<string>" => $input
+    "string" => ($input | lines | compact --empty | each {|path| {path: $path} })
+    "list<string>" => ($input | each {|path| {path: $path} })
+    $kind if $kind =~ '^record' => [$input]
+    $kind if $kind =~ '^table' => $input
     _ => {
       error make {msg: $"Could not handle unknown stdin type ($input | describe)"}
     }
   }
+  if ($selections | is-empty) { return }
   let first_selection = $selections | first
 
   print $"(ansi bo)(ansi blue)=== Open With ===(ansi reset)"
@@ -45,25 +50,26 @@ export def --env menu []: string -> nothing, list<string> -> nothing {
   loop {
     let key = (input listen --types [key])
     match [$key.code $key.modifiers] {
-      ['p', []] => { commandline edit --insert $first_selection; break }
+      ['p', []] => { commandline edit --insert $first_selection.path; break }
       ['n', []] => {
-        let parts = $first_selection | split column ":" --number 4 path start end content | first
-        if ($parts.content? | is-not-empty) {
-          ^nvim $"+($parts.start)" $parts.path
+        if ($first_selection.line? | is-not-empty) {
+          let line = $first_selection.line | into int
+          let column = $first_selection.column? | default 1 | into int
+          ^nvim $"+call cursor\(($line),($column)\)" -- $first_selection.path
         } else {
-          ^nvim $first_selection
+          ^nvim -- $first_selection.path
         }
         break
       }
       ['v', []] => {
         $selections | par-each {|selection|
-          devenv $selection
+          devenv $selection.path
         }
         break
       }
-      ['c', []] => { cd ($first_selection | get folder); break }
-      ['y', []] => { y ($first_selection | get folder); break }
-      ['f', []] => { start $first_selection; break }
+      ['c', []] => { cd ($first_selection.path | get folder); break }
+      ['y', []] => { y ($first_selection.path | get folder); break }
+      ['f', []] => { start $first_selection.path; break }
       ['q', []] => { break }
       ['esc', []] => { break }
       ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }

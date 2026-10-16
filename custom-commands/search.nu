@@ -38,7 +38,7 @@ export def --env menu []: nothing -> nothing {
     }
   }
 
-  if ($result | is-not-empty) {
+  if ($result.selections? | is-not-empty) {
     print ''
     $result.selections | open with
   }
@@ -105,15 +105,22 @@ export def "notes" []: string -> record, nothing -> record {
 # Search for file content in current directory
 export def "grep" []: string -> record, nothing -> record {
   let query = $in | default ''
-  let rg_prefix = "rg --column --line-number --no-heading --color=always --smart-case"
+  const helper = path self "grep-helpers.nu"
+  let reload = $"source ($helper | to nuon); main {q}"
 
-  (fzf --ansi --disabled --query $query --print-query
-    --bind $"start:reload-sync:($rg_prefix) {q}"
-    --bind $"change:reload-sync:($rg_prefix) {q}"
-    --delimiter ":"
-    --preview "bat --color=always {1} --highlight-line {2}"
+  let result = (null | ^fzf --disabled --query $query --print-query
+    --with-shell "nu --no-config-file --no-std-lib -c"
+    --bind $"start:reload-sync:($reload)"
+    --bind $"change:reload-sync:($reload)"
+    --delimiter (char tab) --with-nth 3.. --accept-nth 1
+    --preview 'let match = {1} | decode base64 | decode utf-8 | from json; ^bat --color=always --highlight-line $match.line -- $match.path'
     --preview-window "up,60%,border-bottom,+{2}+3/3,~3"
-    --header "Search - Grep") | parse fzf --grep
+    --header "Search - Grep" | complete)
+  if $result.exit_code in [1 130] { return }
+  if $result.exit_code != 0 {
+    error make {msg: $"Grep picker failed: ($result.stderr | str trim)"}
+  }
+  $result.stdout | parse fzf --grep
 }
 
 # Search for git repositories on your PC

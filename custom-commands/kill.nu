@@ -1,17 +1,17 @@
+use ../tools/fzf.nu ['fzf table']
+
 export def menu [] {
-  let selected = (
+  let processes = (
     ps
     | sort-by mem --reverse
-    | each { |p| $"($p.pid | fill -a r -w 8) ($p.name | fill -a l -w 35) ($p.cpu | math round --precision 1 | fill -a r -w 10) ($p.mem | format filesize MB | fill -a r -w 10)" }
-    | str join "\n"
-    | fzf --multi '--header=PID     Process Name                   CPU (Tab to select multiple)'
-    | lines
+    | fzf table --multi --format {|p|
+      $"($p.pid | fill -a r -w 8) ($p.name | fill -a l -w 35) ($p.cpu | math round --precision 1 | fill -a r -w 10) ($p.mem | format filesize MB | fill -a r -w 10)"
+    } --header="PID     Process Name                   CPU     Memory (Tab to select multiple)"
   )
-  if ($selected | is-empty) { return }
-  let processes = ($selected | each { |s| $s | str trim | parse --regex '(?P<id>\d+)\s+(?P<name>.*?)\s{2,}' | first })
+  if ($processes | is-empty) { return }
 
   print $"(ansi yellow)About to kill ($processes | length) process\(es\):(ansi reset)"
-  $processes | each { |p| print $"(ansi cyan)  - ($p.id) ($p.name)(ansi reset)" }
+  $processes | each { |p| print $"(ansi cyan)  - ($p.pid) ($p.name)(ansi reset)" }
 
   print "Proceed? (y/N)"
   let key = (input listen --types [key])
@@ -22,11 +22,11 @@ export def menu [] {
 
   $processes | each { |p|
     try {
-      print $"(ansi red)Killing ($p.id) ($p.name)...(ansi reset)"
-      kill --force ($p.id | into int)
-      print $"(ansi green)✓ Killed ($p.id) ($p.name)(ansi reset)"
+      print $"(ansi red)Killing ($p.pid) ($p.name)...(ansi reset)"
+      kill --force $p.pid
+      print $"(ansi green)✓ Killed ($p.pid) ($p.name)(ansi reset)"
     } catch { |e|
-      print $"(ansi red)✗ Failed ($p.id) ($p.name): ($e.msg)(ansi reset)"
+      print $"(ansi red)✗ Failed ($p.pid) ($p.name): ($e.msg)(ansi reset)"
     }
   } | ignore
 }

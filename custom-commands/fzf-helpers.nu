@@ -1,5 +1,5 @@
 export def "parse fzf" [
---grep (-g) # Whether to parse as grep search with start lines, end lines and content
+  --grep (-g) # Decode structured match payloads from the grep picker
 ] : string -> record {
   let interaction = $in | lines
   if ($interaction | is-empty) {
@@ -8,6 +8,10 @@ export def "parse fzf" [
 
   {
     query: $interaction.0
-    selections: ($interaction | skip 1)
+    selections: (if $grep {
+      $interaction | skip 1 | each { decode base64 | decode utf-8 | from json }
+    } else {
+      $interaction | skip 1
+    })
   }
 }
