@@ -5,7 +5,7 @@ use ./cache-helpers.nu [cache-value]
 const ITEM = "op://Work/Atlassian - Work"
 
 # Explicit environment overrides take priority over the shared memory cache.
-def cached-value [env_key: string fetch: closure] {
+def env-or-cached [env_key: string fetch: closure] {
   let override = $env | get --optional $env_key
   if ($override | is-not-empty) {
     return $override
@@ -18,9 +18,10 @@ def username [] {
   op-secret ATLASSIANUSERNAME $"($ITEM)/username"
 }
 
-# Atlassian site base URL, e.g. https://<site>.atlassian.net
+# Atlassian site base URL without a trailing slash, e.g. https://<site>.atlassian.net
 export def base-url [] {
-  cached-value JIRABASEURL { op-secret JIRABASEURL $"($ITEM)/Base URL" }
+  env-or-cached JIRABASEURL { op-secret JIRABASEURL $"($ITEM)/Base URL" }
+    | str trim --right --char '/'
 }
 
 # Raw Jira API key, from 1Password (or $env.JIRAAPIKEY when set)
@@ -36,7 +37,7 @@ export def bitbucket-api-key [] {
 # Basic-auth token for the Jira API, built from the API key
 # (or $env.JIRABASE64AUTHTOKEN when set as a prebuilt override)
 export def jira-basic-token [] {
-  cached-value JIRABASE64AUTHTOKEN { basic-token (jira-api-key) }
+  env-or-cached JIRABASE64AUTHTOKEN { basic-token (jira-api-key) }
 }
 
 # Get the authenticated Jira account
@@ -44,7 +45,7 @@ export def jira-account [] {
   http get --headers {
     accept: application/json
     authorization: $"Basic (jira-basic-token)"
-  } $"(base-url | str trim --right --char '/')/rest/api/3/myself"
+  } $"(base-url)/rest/api/3/myself"
 }
 
 # Get the authenticated Jira account ID, rejecting missing or unknown IDs.

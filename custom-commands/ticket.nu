@@ -1,4 +1,3 @@
-use ../tools/fzf.nu *
 use ./atlassian-helpers.nu [jira-basic-token, base-url, jira-account-id]
 use ./jira.nu [setup]
 
@@ -28,19 +27,11 @@ def open-ticket [] {
 # Open ticket in browser from current branch information
 export alias open = open-ticket
 
-# Fetch raw Jira issues using the saved project and status filters.
-def assigned-tickets [
-  --all # Bypass the saved project and status filters
+# Build JQL without fetching credentials, configuration, or issues.
+def assigned-ticket-jql [
+  account_id: string
+  choices: record # Empty to search across all projects and statuses
 ] {
-  let url = base-url | str trim --right --char '/'
-  let headers = {
-    accept: application/json
-    authorization: $"Basic (jira-basic-token)"
-  }
-  let choices = if $all { null } else { setup }
-  if not $all and ($choices | is-empty) { return [] }
-  let account_id = if $all { jira-account-id } else { $choices.account_id }
-
   # WAS does not support currentUser(); use a quoted account ID instead.
   let quoted_account_id = $account_id | to json --raw
   let ticket_filter = if ($choices | is-not-empty) {
@@ -50,17 +41,32 @@ def assigned-tickets [
   } else {
     ""
   }
+  ("(assignee = currentUser() OR assignee WAS " + $quoted_account_id + ")"
+    + $ticket_filter
+    + " ORDER BY updated DESC, created ASC")
+}
+
+# Fetch raw Jira issues using the saved project and status filters.
+def assigned-tickets [
+  --all # Bypass the saved project and status filters
+] {
+  let choices = if $all { {} } else { setup }
+  if not $all and ($choices | is-empty) { return [] }
+  let account_id = if $all { jira-account-id } else { $choices.account_id }
+  let site = base-url
+  let headers = {
+    accept: application/json
+    authorization: $"Basic (jira-basic-token)"
+  }
   mut request = {
-    jql: ("(assignee = currentUser() OR assignee WAS " + $quoted_account_id + ")"
-      + $ticket_filter
-      + " ORDER BY updated DESC, created ASC")
+    jql: (assigned-ticket-jql $account_id $choices)
     fields: [summary priority status]
     maxResults: 50
   }
   mut issues = []
 
   loop {
-    let page = http post --content-type application/json --headers $headers $"($url)/rest/api/3/search/jql" $request
+    let page = http post --content-type application/json --headers $headers $"($site)/rest/api/3/search/jql" $request
     $issues ++= $page.issues
     let next_page = $page | get --optional nextPageToken
     if ($page | get --optional isLast | default false) or ($next_page | is-empty) {
@@ -73,13 +79,6 @@ def assigned-tickets [
   }
 
   $issues
-}
-
-# Change the saved projects and active statuses for this Jira site and account.
-#
-# Cancelling leaves the previous selection unchanged.
-export def "statuses select" [] {
-  setup --configure | ignore
 }
 
 # List Jira tickets currently or previously assigned to you.
@@ -102,31 +101,25 @@ export def list [
 # Pick Jira tickets, returning the selected record or records.
 #
 # Type to search, press Enter to confirm, or Esc to cancel.
+# Add --browse to open the selection without changing the return value.
 export def pick [
   --all # Bypass the saved project and status filters
   --multi(-m) # Select multiple tickets; Tab toggles a ticket, Enter confirms
+  --browse # Open each selected ticket in the browser
 ] {
   let tickets = list --all=$all
   if ($tickets | is-empty) { return }
 
-  $tickets | input list --fuzzy --multi=$multi "Select tickets:" --display {|ticket|
+  let selected = $tickets | input list --fuzzy --multi=$multi "Select tickets:" --display {|ticket|
     $"($ticket.key) [($ticket.status)] - ($ticket.name)"
   }
-}
 
-# Select a raw Jira issue using fzf.
-export def "menu select" [
-  --all # Bypass the saved project and status filters
-] {
-  assigned-tickets --all=$all | fzf --format {|issue| $"($issue.key) - ($issue.fields.summary)"}
-}
-
-# Open ticket in browser from current branch information
-export def "menu open" [
-  --all # Whether to show all tickets, including completed ones
-] {
-  let issue = menu select --all
-  if ($issue | is-not-empty) {
-    start $"(base-url)/browse/($issue.key)"
+  if $browse and ($selected | is-not-empty) {
+    let site = base-url
+    let selected_tickets = if $multi { $selected } else { [$selected] }
+    for ticket in $selected_tickets {
+      start $"($site)/browse/($ticket.key)" | ignore
+    }
   }
+  $selected
 }
