@@ -183,6 +183,16 @@ def default-base-branch [] {
   $head.stdout | str trim
 }
 
+def --env enter-ticket-worktree [base: string, worktree: path] {
+  cd $worktree
+  try {
+    worktree-apps launch $base $worktree --edit
+  } catch {|err|
+    # Return normally so --env preserves the directory change even if a launcher fails.
+    print --stderr $"Changed to worktree ($worktree), but launching apps failed: ($err.msg)"
+  }
+}
+
 # Start a Jira ticket in a new Worktrunk worktree and change the calling shell's directory.
 def --env start-ticket [] {
   source ../tools/git-wt.nu
@@ -217,15 +227,30 @@ def --env start-ticket [] {
   }
   if ($created | is-empty) { return }
 
-  cd $created.worktree
-  try {
-    worktree-apps launch $created.base $created.worktree --edit
-  } catch {|err|
-    # Return normally so --env preserves the successful directory change even if a launcher fails.
-    print --stderr $"Worktree created at ($created.worktree), but launching apps failed: ($err.msg)"
+  enter-ticket-worktree $created.base $created.worktree
+}
+
+# Resume an existing checkout, prefilling the editable search query with the ticket key.
+def --env resume-ticket [] {
+  let ticket = pick
+  if ($ticket | is-empty) { return }
+  let selection = $ticket.key | search repositories --include-worktrees
+  let worktree = $selection.selections?.0?
+  if ($worktree | is-empty) { return }
+
+  # Keep the caller's directory unchanged until every selection is confirmed.
+  let base = do {
+    cd $worktree
+    print 'Pick comparison base:'
+    let selected = git select branch --preferred (default-base-branch)
+    $selected.branch?
   }
+  if ($base | is-empty) { return }
+
+  enter-ticket-worktree $base $worktree
 }
 
 # Keep aliases after imports and sourced scripts so their built-in open/start calls stay intact.
 export alias open = open-ticket
 export alias start = start-ticket
+export alias resume = resume-ticket
