@@ -126,16 +126,21 @@ export def "grep" []: string -> record, nothing -> record {
 # Search for git repositories on your PC
 export def "repositories" [
   --preferred: string # Show this repository first when it is among the search results
+  --include-worktrees # Include linked worktrees and other .git-file checkouts
 ]: string -> record, nothing -> record {
   let query = $in | default ''
   let results = match $nu.os-info.name {
     "windows" => {
-      ^es /ad -r ^\.git$ | lines | each { path dirname } | str join "\n"
+      let attributes = if $include_worktrees { [] } else { [/ad] }
+      ^es ...$attributes -r ^\.git$ | lines | each { path dirname } | str join "\n"
     }
     "linux" => {
       ^locate '*/.git'
         | lines
-        | where {|git_dir| try { ($git_dir | path type) == "dir" } catch { false } }
+        | where {|git_path| try {
+          let kind = $git_path | path type
+          $kind == 'dir' or ($include_worktrees and $kind == 'file')
+        } catch { false } }
         | each { path dirname }
         | str join "\n"
     }
