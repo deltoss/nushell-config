@@ -124,7 +124,9 @@ export def "grep" []: string -> record, nothing -> record {
 }
 
 # Search for git repositories on your PC
-export def "repositories" []: string -> record, nothing -> record {
+export def "repositories" [
+  --preferred: string # Show this repository first when it is among the search results
+]: string -> record, nothing -> record {
   let query = $in | default ''
   let results = match $nu.os-info.name {
     "windows" => {
@@ -145,7 +147,14 @@ export def "repositories" []: string -> record, nothing -> record {
 
   if ($results | is-empty) { return }
 
-  $results | fzf --header="Search - Git Repositories" --query $query --print-query --preview $env.FZF_CUSTOM_PREVIEW | parse fzf
+  let repositories = $results | lines
+  let ordered = if ($preferred | is-not-empty) {
+    let preferred_path = $preferred | path expand
+    $repositories | sort-by {|repo| ($repo | path expand) != $preferred_path }
+  } else {
+    $repositories
+  }
+  $ordered | str join "\n" | fzf --header="Search - Git Repositories" --query $query --print-query --preview $env.FZF_CUSTOM_PREVIEW | parse fzf
 }
 
 # Search for files in the current git repository

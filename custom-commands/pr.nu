@@ -1,8 +1,7 @@
 use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
-use ../tools/visual-studio.nu ['devenv solution', 'devenv is-installed']
-use ../tools/jetbrains-rider.nu ['rider is-installed']
+use ./worktree-apps.nu
 use ./bitbucket.nu [ pr-info ]
 
 def resolve-dest-branch [dest_branch?: string] {
@@ -85,72 +84,10 @@ def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
   ^git -C $bare_dir worktree add $target_dir -B $branch $"origin/($branch)"
 }
 
-def available-review-modes [] {
-  mut modes = [nvim hunk]
-  if (rider is-installed) { $modes ++= [rider] }
-  if (devenv is-installed) { $modes ++= [vs] }
-  $modes
-}
-
-# `devenv solution` is a Nushell command, so a fresh shell has to import it first.
-# zellij strips '\' from the args it forwards after '--', so the path has to use
-# forward slashes; Nushell accepts those on Windows anyway.
-def vs-launch-command [] {
-  let script = $nu.default-config-dir | path join tools visual-studio.nu | str replace --all '\' '/'
-  [nu -c $"use '($script)' ['devenv solution']; devenv solution"]
-}
-
-def rider-launch-command [] {
-  let script = $nu.default-config-dir | path join tools jetbrains-rider.nu | str replace --all '\' '/'
-  [nu -c $"use ($script | to nuon) ['rider solution']; rider solution"]
-}
-
-# The external command each mode runs, as [exe, ...args]. Null when unsupported.
-def diff-command [mode: string, range: string] {
-  match $mode {
-    "nvim" => [
-      nvim
-      # CodeDiff opens a new tab asynchronously; close the startup dashboard tab once it is ready.
-      -c "autocmd User CodeDiffOpen ++once lua vim.schedule(function() vim.cmd('1tabclose') end)"
-      -c $"CodeDiff ($range)"
-    ]
-    "hunk" => {
-      # Hunk has no whitespace flag, so generate the patch with Git and let Hunk render it.
-      # See https://github.com/modem-dev/hunk/issues/794
-      # Use nushell to resolves Windows npm shims with hunk.
-      let target = $range | to nuon
-      let script = $"let patch = mktemp --suffix .patch
-try {
-  ^git diff --ignore-all-space --no-color ($target) | save --force $patch
-  ^hunk patch $patch
-} finally {
-  rm --force $patch
-}"
-      [nu --commands $script]
-    }
-    "rider" => {
-      if (rider is-installed) {
-        rider-launch-command
-      } else {
-        log warning "Rider isn't available on this machine"
-        null
-      }
-    }
-    "vs" => {
-      if (devenv is-installed) {
-        vs-launch-command
-      } else {
-        log warning "Visual Studio isn't available on this machine"
-        null
-      }
-    }
-    _ => { log warning $"Unknown mode '($mode)', skipping diff"; null }
-  }
-}
+def available-review-modes [] { worktree-apps available-modes }
 
 def open-hunk-pane [dest_branch: string, worktree: string] {
-  let range = $"origin/($dest_branch)..."
-  let command = diff-command "hunk" $range
+  let command = worktree-apps launch-command "hunk" $"origin/($dest_branch)"
 
   if ($env.ZELLIJ? | is-not-empty) {
     (^zellij action new-pane
@@ -166,7 +103,7 @@ export def self-review [dest_branch: string] {
   ^git fetch origin $dest_branch
 
   if ($env.ZELLIJ? | is-not-empty) {
-    let command = diff-command "nvim" $"origin/($dest_branch)..."
+    let command = worktree-apps launch-command "nvim" $"origin/($dest_branch)"
     (^zellij action new-pane
       --cwd $worktree --stacked --no-focus --close-on-exit --name nvim
       -- ...$command) | ignore
@@ -180,47 +117,6 @@ export def self-review [dest_branch: string] {
       -- pi "/skill:hunk-self-review") | ignore
   } else {
     ^pi "/skill:hunk-self-review"
-  }
-}
-
-# Visual Studio can't take a branch diff from the CLI, so tell the user where to click
-def print-vs-hint [dest_branch: string] {
-  print $"(ansi yellow)Visual Studio can't open a branch diff from the command line. To see the full diff:(ansi reset)"
-  print $"(ansi bo)(ansi cyan)Git(ansi reset) > (ansi bo)(ansi cyan)Manage Branches(ansi reset) > right-click (ansi bo)(ansi green)origin/($dest_branch)(ansi reset) > (ansi bo)(ansi cyan)Compare with Current Branch(ansi reset)"
-}
-
-# Open the checked-out PR diff in the chosen tools, prompting if none were given.
-# Inside zellij each tool gets its own stacked pane rooted at the worktree, so
-# several can be open at once; the calling pane stays free. Outside zellij the
-# tools run one after another instead.
-def open-diff [dest_branch: string, worktree: string, modes?: list<string>] {
-  let modes = $modes
-    | default { available-review-modes | input list --multi "Open diff with (space to pick, enter to confirm):" }
-    | default []
-    | where {|mode| $mode not-in ["" "none" null] }
-
-  # origin/<dest> always exists here (fetched before checkout); a local <dest> branch may not
-  let range = $"origin/($dest_branch)..." # Note we don't do ...HEAD so it compares against the working directory. Useful so LSPs may kick-in properly
-  let in_zellij = $env.ZELLIJ? | is-not-empty
-
-  for mode in $modes {
-    let command = diff-command $mode $range
-    if ($command | is-empty) { continue }
-    if $mode == "vs" { print-vs-hint $dest_branch }
-
-    if $in_zellij {
-      (^zellij action new-pane
-        --cwd $worktree --stacked --close-on-exit --name $mode
-        -- ...$command) | ignore
-
-      if $mode == "hunk" {
-        (^zellij action new-pane
-          --cwd $worktree --stacked --close-on-exit --name "🤖 Hunk AI"
-          -- nu) | ignore
-      }
-    } else {
-      run-external ($command | first) ...($command | skip 1)
-    }
   }
 }
 
@@ -253,7 +149,7 @@ export def --env review [
   print $"(ansi green)PR #($pr.id) checked out: ($pr.source_branch) -> ($pr.dest_branch)(ansi reset)"
   print $"(ansi green)Worktree: ($target_dir)(ansi reset)"
 
-  open-diff $pr.dest_branch $target_dir $mode
+  worktree-apps launch $"origin/($pr.dest_branch)" $target_dir $mode
 }
 
 # Raise a git pull request for the current repository

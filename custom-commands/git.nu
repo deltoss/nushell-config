@@ -36,13 +36,26 @@ export def menu [] {
   $result
 }
 
+def branch-name [line: string] {
+  $line | ansi strip | str trim
+    | str replace --regex '^[*+]\s*' ''
+    | str replace --regex '^remotes/' ''
+    | str replace --regex '\s*->.+' ''
+}
+
 # Select a git branch's name
 export def "select branch" --wrapped [
   --extra: list<string> = []
+  --preferred: string # Show this branch first without adding a duplicate
   ...rest
 ] {
-  let branches = (git branch -a --color ...$rest | lines)
-  let all = ($extra ++ $branches)
+  let branches = (^git branch -a --color ...$rest | lines)
+  let ordered = if ($preferred | is-not-empty) {
+    $branches | sort-by {|line| (branch-name $line) != $preferred }
+  } else {
+    $branches
+  }
+  let all = ($extra ++ $ordered)
   let interaction = ($all | str join "\n" | fzf --print-query --ansi --header="Git - Branches"
     | complete | get --optional stdout | lines)
 
@@ -60,13 +73,7 @@ export def "select branch" --wrapped [
   } else {
     return {
       query: ($interaction | get 0)
-      branch: ($interaction | get 1 
-        | str trim 
-        | str replace --regex '^\*\s*' ''
-        | str replace --regex '^remotes/' ''
-        | str replace --regex '\x1b\[[0-9;]*m' ''
-        | str replace --regex '\+\s+' ''
-        | str replace --regex '\s*->.+' '')
+      branch: (branch-name $interaction.1)
     }
   }
 }
