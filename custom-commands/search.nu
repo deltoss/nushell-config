@@ -128,16 +128,22 @@ export def "repositories" []: string -> record, nothing -> record {
   let query = $in | default ''
   let results = match $nu.os-info.name {
     "windows" => {
-      ^es -p -r child:^\.git$
+      ^es /ad -r ^\.git$ | lines | each { path dirname } | str join "\n"
     }
     "linux" => {
-      ^locate --ignore-case -r \.git$ | lines | par-each { path dirname } | str join "\n"
+      ^locate '*/.git'
+        | lines
+        | where {|git_dir| try { ($git_dir | path type) == "dir" } catch { false } }
+        | each { path dirname }
+        | str join "\n"
     }
     _ => null
   }
   if ($results == null) {
     error make { msg: $"This search is not supported for your OS: ($nu.os-info.name)" }
   }
+
+  if ($results | is-empty) { return }
 
   $results | fzf --header="Search - Git Repositories" --query $query --print-query --preview $env.FZF_CUSTOM_PREVIEW | parse fzf
 }
