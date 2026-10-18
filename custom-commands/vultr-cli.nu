@@ -1,6 +1,16 @@
+use ../tools/secretspec.nu [secret-value]
+
+# Keep the Vultr API key out of the shell's persistent environment.
+# Only commands launched through this wrapper receive it.
+export def --wrapped vultr-cli [...args] {
+  with-env { VULTR_API_KEY: (secret-value VULTR_API_KEY) } {
+    ^vultr-cli ...$args
+  }
+}
+
 # Select an instance interactively
 export def "instance menu select" [] {
-  (^vultr-cli instance list --output json | from json | get instances
+  (vultr-cli instance list --output json | from json | get instances
   | insert display { |row| $"($row.id) — OS: ($row.os) — Date Created ($row.date_created)" }
   | input list --fuzzy "Select an instance:" --display display
   | reject display)
@@ -18,7 +28,7 @@ export def "instance menu ssh" [] {
 export def "instance menu delete" [] {
   let selection = instance menu select
   if ($selection | is-not-empty) {
-    ^vultr-cli instance delete ($selection | get id)
+    vultr-cli instance delete ($selection | get id)
   }
 }
 
@@ -39,12 +49,12 @@ export def "instance menu create-from-snapshot" [] {
     return
   }
 
-  ^vultr-cli instance create $'--region=($env.VULTR_DEFAULT_REGION)' $'--plan=($env.VULTR_DEFAULT_PLAN)' $'--snapshot=($snapshot.id)' --auto-backup=false $'--ssh-keys=($ssh_key.id)' $'--firewall-group=($firewall_group.id)'
+  vultr-cli instance create $'--region=($env.VULTR_DEFAULT_REGION)' $'--plan=($env.VULTR_DEFAULT_PLAN)' $'--snapshot=($snapshot.id)' --auto-backup=false $'--ssh-keys=($ssh_key.id)' $'--firewall-group=($firewall_group.id)'
 }
 
 # Select an snapshot interactively
 export def "snapshot menu select" [] {
-  let data = ^vultr-cli snapshot list --output json | from json | get snapshots
+  let data = vultr-cli snapshot list --output json | from json | get snapshots
   if (($data | length) == 1) {
     return ($data | first)
   }
@@ -57,7 +67,7 @@ export def "snapshot menu select" [] {
 
 # Select an SSH key interactively
 export def "ssh-key menu select" [] {
-  let data = ^vultr-cli ssh-key list --output json | from json | get ssh_keys
+  let data = vultr-cli ssh-key list --output json | from json | get ssh_keys
   if (($data | length) == 1) {
     return ($data | first)
   }
@@ -70,7 +80,7 @@ export def "ssh-key menu select" [] {
 
 # Select an firewall group interactively
 export def "firewall group menu select" [] {
-  let data = ^vultr-cli firewall group list --output json | from json | get firewall_groups
+  let data = vultr-cli firewall group list --output json | from json | get firewall_groups
   if (($data | length) == 1) {
     return ($data | first)
   }
@@ -83,7 +93,7 @@ export def "firewall group menu select" [] {
 
 # Select a block storage interactively
 export def "block-storage menu select" [] {
-  let data = ^vultr-cli block-storage list --output json | from json | get blocks
+  let data = vultr-cli block-storage list --output json | from json | get blocks
   if (($data | length) == 1) {
     return ($data | first)
   }
@@ -108,7 +118,7 @@ export def "block-storage menu attach" [] {
 
   loop {
     print $"Attempting to attach block storage to ($instance.id)..."
-    let result = (^vultr-cli block-storage attach $block_storage.id $'--instance=($instance.id)' | complete)
+    let result = (vultr-cli block-storage attach $block_storage.id $'--instance=($instance.id)' | complete)
     if $result.exit_code == 0 {
       print "Block storage attached successfully."
       break

@@ -1,8 +1,7 @@
-use ../tools/1password.nu [op-secret]
+use ../tools/secretspec.nu [secret-value]
 use ./cache-helpers.nu [cache-value]
 
-# Every Atlassian credential lives on the same 1Password item; only the field differs
-const ITEM = "op://Work/Atlassian - Work"
+# The matching 1Password item and keyring-backed cache are declared in secretspec.toml.
 
 # Explicit environment overrides take priority over the shared memory cache.
 def env-or-cached [env_key: string fetch: closure] {
@@ -15,23 +14,23 @@ def env-or-cached [env_key: string fetch: closure] {
 
 # Atlassian account username (email), shared by the Jira and Bitbucket APIs
 def username [] {
-  op-secret ATLASSIANUSERNAME $"($ITEM)/username"
+  secret-value ATLASSIANUSERNAME
 }
 
 # Atlassian site base URL without a trailing slash, e.g. https://<site>.atlassian.net
 export def base-url [] {
-  env-or-cached JIRABASEURL { op-secret JIRABASEURL $"($ITEM)/Base URL" }
+  env-or-cached JIRABASEURL { secret-value JIRABASEURL }
     | str trim --right --char '/'
 }
 
-# Raw Jira API key, from 1Password (or $env.JIRAAPIKEY when set)
+# Raw Jira API key, cached by SecretSpec (or $env.JIRAAPIKEY when set)
 export def jira-api-key [] {
-  op-secret JIRAAPIKEY $"($ITEM)/Scripting - Jira"
+  secret-value JIRAAPIKEY
 }
 
-# Raw Bitbucket API key, from 1Password (or $env.BITBUCKETAPIKEY when set)
+# Raw Bitbucket API key, cached by SecretSpec (or $env.BITBUCKETAPIKEY when set)
 export def bitbucket-api-key [] {
-  op-secret BITBUCKETAPIKEY $"($ITEM)/Scripting - BitBucket"
+  secret-value BITBUCKETAPIKEY
 }
 
 # Basic-auth token for the Jira API, built from the API key
