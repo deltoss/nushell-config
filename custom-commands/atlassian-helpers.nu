@@ -1,16 +1,6 @@
 use ../tools/secretspec.nu [secret-value]
-use ./cache-helpers.nu [cache-value]
 
 # The matching 1Password item and keyring-backed cache are declared in secretspec.toml.
-
-# Explicit environment overrides take priority over the shared memory cache.
-def env-or-cached [env_key: string fetch: closure] {
-  let override = $env | get --optional $env_key
-  if ($override | is-not-empty) {
-    return $override
-  }
-  cache-value $env_key $fetch
-}
 
 # Atlassian account username (email), shared by the Jira and Bitbucket APIs
 def username [] {
@@ -19,8 +9,7 @@ def username [] {
 
 # Atlassian site base URL without a trailing slash, e.g. https://<site>.atlassian.net
 export def base-url [] {
-  env-or-cached JIRABASEURL { secret-value JIRABASEURL }
-    | str trim --right --char '/'
+  secret-value JIRABASEURL | str trim --right --char '/'
 }
 
 # Raw Jira API key, cached by SecretSpec (or $env.JIRAAPIKEY when set)
@@ -36,7 +25,7 @@ export def bitbucket-api-key [] {
 # Basic-auth token for the Jira API, built from the API key
 # (or $env.JIRABASE64AUTHTOKEN when set as a prebuilt override)
 export def jira-basic-token [] {
-  env-or-cached JIRABASE64AUTHTOKEN { basic-token (jira-api-key) }
+  $env | get --optional JIRABASE64AUTHTOKEN | default --empty { basic-token (jira-api-key) }
 }
 
 # Get the authenticated Jira account
