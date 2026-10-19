@@ -1,7 +1,13 @@
-use ../tools/secretspec.nu [secret-value]
+use ../../tools/secretspec.nu [secret-value]
+use ./completions.nu [complete-vultr-cli]
+
+def "nu-complete vultr-cli" [token: record, place: record] {
+  complete-vultr-cli $token $place {|args| main ...$args}
+}
 
 # Keep the Vultr API key out of the shell's persistent environment.
 # Only commands launched through this wrapper receive it.
+@complete "nu-complete vultr-cli"
 export def --wrapped main [...args] {
   with-env { VULTR_API_KEY: (secret-value VULTR_API_KEY) } {
     ^vultr-cli ...$args

@@ -9,7 +9,7 @@ export module ./kill.nu
 export module ./ai.nu
 export module ./dotnet.nu
 export module ./open.nu
-export module ./vultr-cli.nu
+export module ./vultr-cli
 export module ./zellij.nu
 export module ./leader.nu
 export module ./huh.nu

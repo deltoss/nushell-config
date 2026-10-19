@@ -22,7 +22,6 @@ use ../nu_scripts/custom-completions/cargo/cargo-completions.nu *
 
 use ./yazi-completions.nu *
 use ./ya-completions.nu *
-use ./vultr-cli-completions.nu *
 use ./serena-completions.nu *
 use ./fabric-completions.nu *
 use ./kokoro-completions.nu *
