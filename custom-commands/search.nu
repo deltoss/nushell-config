@@ -116,7 +116,7 @@ export def "grep" []: string -> record, nothing -> record {
     --preview 'let match = {1} | decode base64 | decode utf-8 | from json; ^bat --color=always --highlight-line $match.line -- $match.path'
     --preview-window "up,60%,border-bottom,+{2}+3/3,~3"
     --header "Search - Grep" | complete)
-  if $result.exit_code in [1 130] { return }
+  if $result.exit_code in [1 130] { return {} }
   if $result.exit_code != 0 {
     error make {msg: $"Grep picker failed: ($result.stderr | str trim)"}
   }
@@ -150,7 +150,7 @@ export def "repositories" [
     error make { msg: $"This search is not supported for your OS: ($nu.os-info.name)" }
   }
 
-  if ($results | is-empty) { return }
+  if ($results | is-empty) { return {} }
 
   let repositories = $results | lines
   let ordered = if ($preferred | is-not-empty) {

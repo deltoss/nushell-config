@@ -3,7 +3,7 @@ export def "parse fzf" [
 ] : string -> record {
   let interaction = $in | lines
   if ($interaction | is-empty) {
-    return
+    return {}
   }
 
   {
