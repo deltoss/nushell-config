@@ -63,13 +63,22 @@ try {
 }
 
 export def launch [base: string, worktree: path, modes?: list<string>, --edit] {
-  let prompt = if $edit {
-    "Open with (space to pick, enter to confirm):"
-  } else {
-    "Open diff with (space to pick, enter to confirm):"
-  }
+  let prompt = if $edit { "Open with" } else { "Open diff with" }
   let selected = $modes
-    | default { available-modes | input list --multi $prompt }
+    | default {
+      let result = (
+        available-modes
+        | tui label --titlebar $prompt
+        | tui select --multi
+        | tui run --dialog
+      )
+      if $result.action != "submit" {
+        []
+      } else {
+        let picked = $result.selected
+        if ($picked | describe) =~ '^list' { $picked } else { [$picked] }
+      }
+    }
     | default []
     | where {|mode| $mode not-in ["" "none" null] }
   let in_zellij = $env.ZELLIJ? | is-not-empty

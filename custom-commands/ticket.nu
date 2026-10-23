@@ -3,6 +3,7 @@ use ./jira.nu [setup]
 use ./search.nu
 use ./git.nu
 use ./worktree-apps.nu
+use ../tools/tui.nu [tui-picker]
 
 # Capture the browser opener before ticket start shadows it.
 alias open-browser = start
@@ -107,15 +108,13 @@ export def list [
 # Add --browse to open the selection without changing the return value.
 export def pick [
   --all # Bypass the saved project and status filters
-  --multi(-m) # Select multiple tickets; Tab toggles a ticket, Enter confirms
+  --multi(-m) # Select multiple tickets; Space toggles a ticket, Enter confirms
   --browse # Open each selected ticket in the browser
 ] {
   let tickets = list --all=$all
   if ($tickets | is-empty) { return }
 
-  let selected = $tickets | input list --fuzzy --multi=$multi "Select tickets:" --display {|ticket|
-    $"($ticket.key) [($ticket.status)] - ($ticket.name)"
-  }
+  let selected = $tickets | tui-picker "Select tickets" [key status priority name] --multi=$multi
 
   if $browse and ($selected | is-not-empty) {
     let site = base-url
