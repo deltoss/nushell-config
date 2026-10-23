@@ -1,4 +1,4 @@
-use "../custom-commands/fzf-helpers.nu" ['parse fzf']
+use ./tui.nu [tui-picker]
 use "../custom-commands/start.nu"
 
 const vswhere_path = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
@@ -34,9 +34,11 @@ export def --wrapped devenv [...rest] {
 # Launch a solution file in current directory or sub directories
 export def --wrapped "devenv solution" [...rest] {
   let query = $in | default ''
-  let interaction = glob "**/*.sln" | str join "\n" | fzf --multi --header='Search - .NET Solution' --print-query --query $query | parse fzf
-  if ($interaction | get --optional selections | is-empty) {
-    return
+  let solutions = glob "**/*.sln"
+    | where {|path| ($query | is-empty) or ($path | str contains --ignore-case $query) }
+    | each {|path| {path: $path} }
+  let selected = $solutions | tui-picker "Select .NET solutions" [path] --multi
+  for solution in $selected {
+    devenv $solution.path
   }
-  devenv ($interaction | get selections.0)
 }

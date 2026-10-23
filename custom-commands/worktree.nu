@@ -1,6 +1,6 @@
 use ./git-helpers.nu [repo-folder, worktrees-folder]
 use ./git.nu ['select branch']
-use ../tools/fzf.nu ['fzf table']
+use ../tools/tui.nu [tui-picker]
 
 export def --env main [] {
   menu
@@ -78,9 +78,7 @@ export def list [] {
 }
 
 export def select [] {
-  list | fzf table --format {|it|
-    $"($it.branch | fill -a l -w 40) ($it.commit_short | fill -a l -w 10) ($it.relative_path)"
-  } --header="Git - Worktrees"
+  list | tui-picker "Git worktrees" [branch commit_short relative_path]
 }
 
 # Switch to the directory of a git worktree

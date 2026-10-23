@@ -1,3 +1,5 @@
+use ../tools/tui.nu [tui-picker]
+
 export def --wrapped new [...rest] {
   new menu ...$rest
 }
@@ -26,8 +28,10 @@ export def --wrapped "new menu" [
     | parse -r '(?P<name>.+?)\s{2,}(?P<short>\S+)\s{2,}(?P<lang>.+?)\s{2,}(?P<tags>.+?)\s*$'
     | par-each { |row|
       {
-        display: $"($row.name | str trim | fill -w 45) ($row.short | str trim | fill -w 20) ($row.lang | str trim)"
+        name: ($row.name | str trim)
         short_name: ($row.short | str trim)
+        language: ($row.lang | str trim)
+        tags: ($row.tags | str trim)
       }
     }
   )
@@ -37,23 +41,10 @@ export def --wrapped "new menu" [
     return
   }
 
-  let selected = (
-    $templates_list
-    | get display
-    | str join "\n"
-    | fzf --header="Select Project Template" --height=20 --layout=reverse
-  )
-
+  let selected = $templates_list | tui-picker "Select project template" [name short_name language tags]
   if ($selected | is-empty) { return }
 
-  let selected_name = (
-    $templates_list
-    | where display == $selected
-    | first
-    | get short_name
-    | split row ","
-    | first
-  )
+  let selected_name = $selected.short_name | split row "," | first
 
   let project_name = (input "Project name: " | str trim)
   if ($project_name | is-empty) { return }

@@ -1,3 +1,5 @@
+use ../tools/tui.nu [tui-picker]
+
 # Bring up interactive menu for custom git operations
 export def menu [] {
   print $"(ansi bo)(ansi cyan)b(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)B(ansi reset)]ranch"
@@ -43,60 +45,67 @@ def branch-name [line: string] {
     | str replace --regex '\s*->.+' ''
 }
 
-# Select a git branch's name
+# Select a branch, or press Ctrl+N to create a new branch.
+# Returns {query, branch} so callers can distinguish new and existing branches.
 export def "select branch" --wrapped [
   --extra: list<string> = []
   --preferred: string # Show this branch first without adding a duplicate
   ...rest
 ] {
-  let branches = (^git branch -a --color ...$rest | lines)
+  let branches = (^git branch -a --no-color ...$rest | lines
+    | each {|line| {branch: (branch-name $line)} }
+    | where branch != "")
   let ordered = if ($preferred | is-not-empty) {
-    $branches | sort-by {|line| (branch-name $line) != $preferred }
+    $branches | sort-by {|row| $row.branch != $preferred }
   } else {
     $branches
   }
-  let all = ($extra ++ $ordered)
-  let interaction = ($all | str join "\n" | fzf --print-query --ansi --header="Git - Branches"
-    | complete | get --optional stdout | lines)
+  let extras = ($extra | each {|name| {branch: ($name | str trim)} })
+  let result = (
+    ($extras ++ $ordered)
+    | tui label --titlebar "Git branches"
+    | tui search --bind / --fuzzy --columns [branch] --id branch-query
+    | tui table --focus --columns [branch]
+    | tui bind ctrl+n {|state|
+        {action: submit, selected: {branch: null, query: ($state.values | get --optional branch-query | default "")}}
+      }
+    | tui label --status "up/down: move  /: filter  ctrl+n: new branch  enter: select"
+    | tui run --dialog
+  )
+  if $result.action != "submit" { return null }
 
-  # Return null if nothing selected
-  if ($interaction | is-empty) {
-    return null
+  let branch = $result.selected.branch?
+  let query = ($result.values | get --optional branch-query | default "")
+  if ($branch | is-not-empty) {
+    return {query: $query, branch: $branch}
   }
 
-  # Check if we got a query only or query + selection
-  if ($interaction | length) == 1 {
-    return {
-      query: ($interaction | get 0)
-      branch: null
-    }
-  } else {
-    return {
-      query: ($interaction | get 0)
-      branch: (branch-name $interaction.1)
-    }
-  }
+  let name = ($result.selected.query? | default "" | str trim)
+  let name = if ($name | is-empty) { input "New branch name: " | str trim } else { $name }
+  if ($name | is-empty) { return null }
+  {query: $name, branch: null}
 }
 
 # Select a git commit's hash
 export def "select commit" --wrapped [
   ...rest
 ] {
-  ^git log --all --color=always --pretty=format:"%C(yellow)%h%C(reset) %C(green)%ad%C(reset) %s %C(blue)(%an)%C(reset) %H" --date=format:"%Y-%m-%d %I:%M %p" ...$rest
-  | fzf --print-query --ansi --header="Git - Commits"
-  | str trim
-  | ansi strip
-  | split row ' '
-  | first
+  let commits = (^git log --all --no-color --pretty=format:"%h¦¦¦%ad¦¦¦%s¦¦¦%an" --date=short ...$rest
+    | lines
+    | split column "¦¦¦" hash date subject author)
+  let selected = $commits | tui-picker "Git commits" [hash date subject author]
+  $selected.hash?
 }
 
 # Select a changed file's path
 export def "select file" --wrapped [
   ...rest
 ] {
-  git status --porcelain ...$rest | fzf --header="Git - Changed Files"
-  | str substring 3..-1
-  | str trim
+  let files = (^git status --porcelain ...$rest | lines | each {|line|
+    {status: ($line | str substring 0..1), path: ($line | str substring 3..)}
+  })
+  let selected = $files | tui-picker "Git changed files" [status path]
+  $selected.path?
 }
 
 # Revisions and changed files, for commands that accept either.
@@ -178,9 +187,7 @@ export def "log menu" --wrapped [
   ...rest
 ] {
   let $selection = (select branch --extra ["  HEAD", "  --all"])
-  if ($selection | is-empty) {
-    return
-  }
+  if ($selection.branch? | is-empty) { return }
 
-  log ($selection | get branch)
+  log $selection.branch
 }

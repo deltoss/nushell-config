@@ -1,4 +1,4 @@
-use "../custom-commands/fzf-helpers.nu" ['parse fzf']
+use ./tui.nu [tui-picker]
 use "../custom-commands/start.nu"
 
 def rider-launcher [] {
@@ -43,7 +43,7 @@ export def --wrapped rider [...rest] {
 }
 
 # Find and launch solutions in the current directory and subdirectories.
-@example "Select solutions with fzf" { rider solution }
+@example "Select solutions with a TUI" { rider solution }
 @example "Start with a search query" { "MyApp" | rider solution }
 export def --wrapped "rider solution" [...rest] {
   let query = $in | default ''
@@ -57,7 +57,7 @@ export def --wrapped "rider solution" [...rest] {
 }
 
 # Pick and launch recent projects from Rider's saved history, newest first.
-@example "Select recent projects with fzf" { rider recent }
+@example "Select recent projects with a TUI" { rider recent }
 @example "Start with a search query" { "MyApp" | rider recent }
 export def --wrapped "rider recent" [...rest] {
   let query = $in | default ''
@@ -137,14 +137,11 @@ def "recent solutions" [history: path] {
 }
 
 def "pick solutions" [solutions: list<string>, query: string, header: string, rest: list] {
-  let result = $solutions | str join "\n" | ^fzf --multi --header=$header --print-query --query $query | complete
-  if $result.exit_code in [1 130] { return }
-  if $result.exit_code != 0 {
-    error make { msg: $"Solution picker failed: ($result.stderr | str trim)" }
-  }
-
-  let interaction = $result.stdout | parse fzf
-  for solution in ($interaction | get --optional selections | default []) {
-    rider $solution ...$rest
+  let candidates = $solutions
+    | where {|path| ($query | is-empty) or ($path | str contains --ignore-case $query) }
+    | each {|path| {path: $path} }
+  let selected = $candidates | tui-picker $header [path] --multi
+  for solution in $selected {
+    rider $solution.path ...$rest
   }
 }
