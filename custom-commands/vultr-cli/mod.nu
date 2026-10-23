@@ -1,5 +1,6 @@
 use ../../tools/secretspec.nu [secret-value]
 use ./completions.nu [complete-vultr-cli]
+use ../../tools/tui.nu [tui-picker]
 
 def "nu-complete vultr-cli" [token: record, place: record] {
   complete-vultr-cli $token $place {|args| main ...$args}
@@ -16,10 +17,8 @@ export def --wrapped main [...args] {
 
 # Select an instance interactively
 export def "instance menu select" [] {
-  (main instance list --output json | from json | get instances
-  | insert display { |row| $"($row.id) — OS: ($row.os) — Date Created ($row.date_created)" }
-  | input list --fuzzy "Select an instance:" --display display
-  | reject display)
+  main instance list --output json | from json | get instances
+  | tui-picker "Select an instance" [id os main_ip date_created]
 }
 
 # SSH into an instance interactively
@@ -65,10 +64,7 @@ export def "snapshot menu select" [] {
     return ($data | first)
   }
 
-  ($data
-  | insert display { |row| $"($row.id) — ($row.description) — Date Created: ($row.date_created)" }
-  | input list --fuzzy "Select a snapshot:" --display display
-  | reject display)
+  $data | tui-picker "Select a snapshot" [id description date_created]
 }
 
 # Select an SSH key interactively
@@ -78,10 +74,7 @@ export def "ssh-key menu select" [] {
     return ($data | first)
   }
 
-  ($data
-  | insert display { |row| $"($row.id) — ($row.name) — Date Created: ($row.date_created)" }
-  | input list --fuzzy "Select a key:" --display display
-  | reject display)
+  $data | tui-picker "Select an SSH key" [id name date_created]
 }
 
 # Select an firewall group interactively
@@ -91,10 +84,7 @@ export def "firewall group menu select" [] {
     return ($data | first)
   }
 
-  ($data
-  | insert display { |row| $"($row.id) — ($row.description) — Date Created: ($row.date_created)" }
-  | input list --fuzzy "Select a firewall rule:" --display display
-  | reject display)
+  $data | tui-picker "Select a firewall group" [id description date_created]
 }
 
 # Select a block storage interactively
@@ -104,10 +94,7 @@ export def "block-storage menu select" [] {
     return ($data | first)
   }
 
-  ($data
-  | insert display { |row| $"($row.id) — Size in GB: ($row.size_gb) — Date Created: ($row.date_created)" }
-  | input list --fuzzy "Select a block storage:" --display display
-  | reject display)
+  $data | tui-picker "Select block storage" [id size_gb date_created]
 }
 
 # Attach a block storage interactively

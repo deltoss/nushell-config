@@ -1,4 +1,5 @@
 use ./atlassian-helpers.nu [base-url, jira-basic-token, jira-account-id]
+use ../tools/tui.nu [tui-picker]
 
 # Load saved Jira choices, prompting for projects and active statuses when needed.
 def load-or-configure-choices [
@@ -28,18 +29,13 @@ def load-or-configure-choices [
   let projects = fetch-projects $site $headers
   if ($projects | is-empty) { return }
 
-  let selected_projects = (
-    $projects | sort-by key
-    | input list --fuzzy --multi "Choose projects (Tab to toggle, Enter to confirm):" --display {|project|
-      $"($project.key) - ($project.name)"
-    }
-  )
+  let selected_projects = $projects | sort-by key | tui-picker "Choose projects" [key name] --multi
   if ($selected_projects | is-empty) { return }
 
   let statuses = fetch-project-statuses $site $headers $selected_projects
   if ($statuses | is-empty) { return }
 
-  let selected_statuses = $statuses | input list --fuzzy --multi --display name "Choose active statuses (Tab to toggle, Enter to save):"
+  let selected_statuses = $statuses | tui-picker "Choose active statuses" [name id] --multi
   if ($selected_statuses | is-empty) { return }
 
   let choices = {
