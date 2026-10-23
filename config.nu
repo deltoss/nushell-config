@@ -54,6 +54,13 @@ if $nu.is-interactive {
 # nu runs non-interactively
 use ./nu_scripts/themes/nu-themes/atelier-cave-light.nu
 atelier-cave-light set color_config
+$env.config.tui.surface = {bg: $env.config.color_config.background}
+$env.config.tui.backdrop = {bg: $env.config.color_config.background}
+$env.config.tui.title_bar = {
+  fg: $env.config.color_config.foreground
+  bg: $env.config.color_config.background
+  attr: b
+}
 if $nu.is-interactive {
     atelier-cave-light update terminal
 }

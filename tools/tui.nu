@@ -19,18 +19,18 @@ export def tui-picker [
   }
 
   let hint = if $multi {
-    "up/down: move  /: filter  space: check  enter: confirm  ctrl+c: cancel"
+    " / : move  /: filter  space: check  enter: confirm  ctrl+c: cancel"
   } else {
-    "up/down: move  /: filter  enter: select  ctrl+c: cancel"
+    " / : move  /: filter  enter: select  ctrl+c: cancel"
   }
 
   let result = (
     $rows
     | tui label --titlebar $title
-    | tui search --bind / --fuzzy --columns $columns
+    | tui search --bind / --fuzzy --columns $columns --placeholder "/ to search"
     | tui table --focus --columns $columns --multi=$multi
     | tui label --status $hint
-    | tui run --dialog
+    | tui run
   )
 
   if $result.action != "submit" {
