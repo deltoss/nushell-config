@@ -1,4 +1,4 @@
-use ../tools/fzf.nu *
+use ../tools/tui.nu [tui-picker]
 use ./atlassian-helpers.nu [bitbucket-basic-token]
 
 # Perform an authenticated GET against the Bitbucket Cloud v2 API
@@ -21,7 +21,7 @@ export def "select workspace" [] {
   if ($workspaces | length) <= 1 {
     return ($workspaces | get --optional 0)
   }
-  $workspaces | fzf --format {|it| $"($it.name) \(($it.slug)\)" }
+  $workspaces | tui-picker "Select Bitbucket workspace" [name slug]
 }
 
 export def "get repositories" [

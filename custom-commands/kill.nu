@@ -1,12 +1,10 @@
-use ../tools/fzf.nu ['fzf table']
+use ../tools/tui.nu [tui-picker]
 
 export def menu [] {
   let processes = (
     ps
     | sort-by mem --reverse
-    | fzf table --multi --format {|p|
-      $"($p.pid | fill -a r -w 8) ($p.name | fill -a l -w 35) ($p.cpu | math round --precision 1 | fill -a r -w 10) ($p.mem | format filesize MB | fill -a r -w 10)"
-    } --header="PID     Process Name                   CPU     Memory (Tab to select multiple)"
+    | tui-picker "Processes to kill" [pid name cpu mem] --multi
   )
   if ($processes | is-empty) { return }
 

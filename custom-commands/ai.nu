@@ -1,3 +1,5 @@
+use ../tools/tui.nu [tui-picker]
+
 # Bring up interactive menu for AI operations
 export def menu [] {
   print $"(ansi bo)(ansi cyan)a(ansi bl) ⟶ (ansi reset)[(ansi bo)A(ansi reset)]I"
@@ -34,21 +36,15 @@ export def menu [] {
 }
 
 def "select role" [] {
-  let resp = ^aichat --list-roles | fzf --header "Roles" | complete
-  if ($resp.exit_code == 0) {
-    ["--role", ($resp.stdout | str trim)]
-  } else {
-    []
-  }
+  let selected = (^aichat --list-roles | lines | each {|value| {value: $value} }
+    | tui-picker "AI roles" [value])
+  if ($selected | is-empty) { [] } else { ["--role", $selected.value] }
 }
 
 def "select model" [] {
-  let resp = ^aichat --list-models | fzf --header "Models" | complete
-  if ($resp.exit_code == 0) {
-    ["--model", ($resp.stdout | str trim)]
-  } else {
-    []
-  }
+  let selected = (^aichat --list-models | lines | each {|value| {value: $value} }
+    | tui-picker "AI models" [value])
+  if ($selected | is-empty) { [] } else { ["--model", $selected.value] }
 }
 
 export def main --wrapped [...rest] {
@@ -79,20 +75,38 @@ export def code --wrapped [...rest] {
 
 # Resume from a interactively selected session
 export def session --wrapped [...rest] {
-  let session = (^aichat --list-sessions | ^fzf --header "Sessions" | str trim)
-  ^aichat --session $session ...$rest
+  let selected = (^aichat --list-sessions | lines | each {|value| {value: $value} }
+    | tui-picker "AI sessions" [value])
+  if ($selected | is-empty) { return }
+  ^aichat --session $selected.value ...$rest
 }
 
 # Start a RAG
 export def rag [...rest] {
-  let rag = (^aichat --list-rags | fzf --header "RAGs" | str trim)
-  ^aichat --rag $rag ...$rest
+  let selected = (^aichat --list-rags | lines | each {|value| {value: $value} }
+    | tui-picker "AI RAGs" [value])
+  if ($selected | is-empty) { return }
+  ^aichat --rag $selected.value ...$rest
 }
 
 # Start a macro
 export def macro --wrapped [...rest] {
-  let macro = (^aichat --list-macros | fzf --header "Macros" | str trim)
-  ^aichat --macro $macro ...$rest
+  let selected = (^aichat --list-macros | lines | each {|value| {value: $value} }
+    | tui-picker "AI macros" [value])
+  if ($selected | is-empty) { return }
+  ^aichat --macro $selected.value ...$rest
+}
+
+def "select changed files" [] {
+  ^git status --porcelain
+  | lines
+  | each {|line| {
+      status: ($line | str substring 0..1)
+      path: ($line | str substring 3..)
+    }
+  }
+  | tui-picker "Select changed files" [status path] --multi
+  | each {|row| $row.path }
 }
 
 # Suggests a git commit message
@@ -106,12 +120,7 @@ export def "suggest commit" [
   let initial_prompt = "I will give you the git diffs, then I will ask you to generate me a short, concise & relevant commit message."
   ^aichat -s $session_name $initial_prompt
 
-  let selected_files = (
-    ^git status --porcelain
-    | fzf -m --header "Select multiple with [TAB] and [SHIFT-TAB]"
-    | lines
-    | str substring 3.. # Extract filename by removing the first 3 characters (status code + space)
-  )
+  let selected_files = select changed files
 
   if ($selected_files | is-empty) {
     print "No selection made..."
@@ -152,12 +161,7 @@ export def "review diffs" [
 
   ^aichat -s $session_name $initial_prompt
 
-  let selected_files = (
-    ^git status --porcelain
-    | fzf -m --header "Select multiple with [TAB] and [SHIFT-TAB]"
-    | lines
-    | str substring 3..
-  )
+  let selected_files = select changed files
 
   if ($selected_files | is-empty) {
     print "No selection made..."
