@@ -43,24 +43,22 @@ export def --wrapped rider [...rest] {
 }
 
 # Find and launch solutions in the current directory and subdirectories.
+# Press / to search in the picker; piped initial queries are not supported.
 @example "Select solutions with a TUI" { rider solution }
-@example "Start with a search query" { "MyApp" | rider solution }
 export def --wrapped "rider solution" [...rest] {
-  let query = $in | default ''
   let solutions = glob --no-dir "**/*.{sln,slnx}"
   if ($solutions | is-empty) {
     print "No .NET solutions found in the current directory or its subdirectories."
     return
   }
 
-  pick solutions $solutions $query 'Search - .NET Solutions (Tab to Select)' $rest
+  pick solutions $solutions 'Search - .NET Solutions' $rest
 }
 
 # Pick and launch recent projects from Rider's saved history, newest first.
+# Press / to search in the picker; piped initial queries are not supported.
 @example "Select recent projects with a TUI" { rider recent }
-@example "Start with a search query" { "MyApp" | rider recent }
 export def --wrapped "rider recent" [...rest] {
-  let query = $in | default ''
   let history = "~/.config/rider/options/recentSolutions.xml" | path expand
   let solutions = recent solutions $history
   if ($solutions | is-empty) {
@@ -68,22 +66,21 @@ export def --wrapped "rider recent" [...rest] {
     return
   }
 
-  pick solutions $solutions $query 'Search - Rider Recent Projects (Tab to Select)' $rest
+  pick solutions $solutions 'Search - Rider Recent Projects' $rest
 }
 
 # Find and launch solutions recursively under the directories in PROJECT_DIRS.
 # Uses fd's default hidden-file and ignore rules.
+# Press / to search in the picker; piped initial queries are not supported.
 @example "Search all configured project directories" { rider projects }
-@example "Start with a search query" { "MyApp" | rider projects }
 export def --wrapped "rider projects" [...rest] {
-  let query = $in | default ''
   let solutions = project solutions ($env.PROJECT_DIRS? | default [])
   if ($solutions | is-empty) {
     print "No .NET solutions found in the configured project directories."
     return
   }
 
-  pick solutions $solutions $query 'Search - Project Solutions (Tab to Select)' $rest
+  pick solutions $solutions 'Search - Project Solutions' $rest
 }
 
 # Register subcommand aliases so Nushell can complete rd pro, rd re, and rd so.
@@ -136,11 +133,13 @@ def "recent solutions" [history: path] {
   } | sort-by --reverse last_used | get --optional path | default [] | where { path exists } | uniq
 }
 
-def "pick solutions" [solutions: list<string>, query: string, header: string, rest: list] {
-  let candidates = $solutions
-    | where {|path| ($query | is-empty) or ($path | str contains --ignore-case $query) }
-    | each {|path| {path: $path} }
-  let selected = $candidates | tui-picker $header [path] --multi
+def "pick solutions" [solutions: list<string>, header: string, rest: list] {
+  let candidates = $solutions | each {|path| {path: $path} }
+  let selected = if ($candidates | length) == 1 {
+    $candidates
+  } else {
+    $candidates | tui-picker $header [path] --multi
+  }
   for solution in $selected {
     rider $solution.path ...$rest
   }

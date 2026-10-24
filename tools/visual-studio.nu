@@ -32,12 +32,14 @@ export def --wrapped devenv [...rest] {
 }
 
 # Launch a solution file in current directory or sub directories
+# Press / to search in the picker; piped initial queries are not supported.
 export def --wrapped "devenv solution" [...rest] {
-  let query = $in | default ''
-  let solutions = glob "**/*.sln"
-    | where {|path| ($query | is-empty) or ($path | str contains --ignore-case $query) }
-    | each {|path| {path: $path} }
-  let selected = $solutions | tui-picker "Select .NET solutions" [path] --multi
+  let solutions = glob "**/*.sln" | each {|path| {path: $path} }
+  let selected = if ($solutions | length) == 1 {
+    $solutions
+  } else {
+    $solutions | tui-picker "Select .NET solutions" [path] --multi
+  }
   for solution in $selected {
     devenv $solution.path
   }
