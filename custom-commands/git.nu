@@ -1,4 +1,5 @@
 use ../tools/tui.nu [tui-picker]
+use ../tools/git-preview.nu [changed-files file-preview commit-preview branch-preview]
 
 # Bring up interactive menu for custom git operations
 export def menu [] {
@@ -13,14 +14,14 @@ export def menu [] {
   print $"(ansi bo)(ansi cyan)w(ansi bl) ⟶ (ansi reset)[(ansi bo)W(ansi reset)]orktree"
   print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
 
-  mut result = ''
+  mut result: any = ''
   loop {
     let key = (input listen --types [key])
     match [$key.code $key.modifiers] {
       ['b', []] => { $result = (select branch | get --optional branch); break }
       ['c', []] => { $result = select commit; break }
       ['f', []] => { $result = select file; break }
-      ['l', []] => { $result = log; break }
+      ['l', []] => { log; break }
       ['g', []] => { commandline edit  --accept --replace "lazygit"; break }
       ['G', []] => { commandline edit  --accept --replace "gh gist edit"; break }
       ['m', []] => { commandline edit  --accept --replace "git mergetool"; break }
@@ -38,11 +39,22 @@ export def menu [] {
   $result
 }
 
-def branch-name [line: string] {
-  $line | ansi strip | str trim
-    | str replace --regex '^[*+]\s*' ''
-    | str replace --regex '^remotes/' ''
-    | str replace --regex '\s*->.+' ''
+def --wrapped branch-rows [...rest] {
+  let format = "%(refname)%00%(committerdate:relative)%00%(HEAD)%00%(symref)%00%(subject)"
+  ^git branch --all --no-color --sort=-committerdate $"--format=($format)" ...$rest
+  | lines
+  | split column (char nul) ref when current target subject
+  | where {|row| ($row.ref =~ '^refs/(heads|remotes)/') and ($row.target | is-empty) }
+  | each {|row|
+      let name = $row.ref | str replace --regex '^refs/(heads|remotes)/' ''
+      {
+        name: (if $row.current == "*" { $"* ($name)" } else { $name })
+        when: $row.when
+        subject: $row.subject
+        branch: $name
+        ref: $row.ref
+      }
+    }
 }
 
 # Select a branch, or press Ctrl+N to create a new branch.
@@ -52,35 +64,27 @@ export def "select branch" --wrapped [
   --preferred: string # Show this branch first without adding a duplicate
   ...rest
 ] {
-  let branches = (^git branch -a --no-color ...$rest | lines
-    | each {|line| {branch: (branch-name $line)} }
-    | where branch != "")
+  let branches = branch-rows ...$rest
   let ordered = if ($preferred | is-not-empty) {
     $branches | sort-by {|row| $row.branch != $preferred }
   } else {
     $branches
   }
-  let extras = ($extra | each {|name| {branch: ($name | str trim)} })
-  let result = (
+  let extras = ($extra | each {|name|
+    let branch = $name | str trim
+    {name: $branch, when: "", subject: "", branch: $branch, ref: $branch}
+  })
+  let selected = (
     ($extras ++ $ordered)
-    | tui label --titlebar "Git branches"
-    | tui search --bind / --fuzzy --columns [branch] --id branch-query
-    | tui table --focus --columns [branch]
-    | tui bind ctrl+n {|state|
-        {action: submit, selected: {branch: null, query: ($state.values | get --optional branch-query | default "")}}
-      }
-    | tui label --status "up/down: move  /: filter  ctrl+n: new branch  enter: select"
-    | tui run --dialog
+    | tui-picker "Git branches" [name when subject]
+        --preview {|branch| branch-preview $branch.ref }
+        --on-new {|query| {branch: null, query: $query} }
+        --on-submit {|branch, query| {query: $query, branch: $branch.branch?} }
   )
-  if $result.action != "submit" { return null }
+  if ($selected | is-empty) { return null }
+  if ($selected.branch | is-not-empty) { return $selected }
 
-  let branch = $result.selected.branch?
-  let query = ($result.values | get --optional branch-query | default "")
-  if ($branch | is-not-empty) {
-    return {query: $query, branch: $branch}
-  }
-
-  let name = ($result.selected.query? | default "" | str trim)
+  let name = ($selected.query? | default "" | str trim)
   let name = if ($name | is-empty) { input "New branch name: " | str trim } else { $name }
   if ($name | is-empty) { return null }
   {query: $name, branch: null}
@@ -93,7 +97,8 @@ export def "select commit" --wrapped [
   let commits = (^git log --all --no-color --pretty=format:"%h¦¦¦%ad¦¦¦%s¦¦¦%an" --date=short ...$rest
     | lines
     | split column "¦¦¦" hash date subject author)
-  let selected = $commits | tui-picker "Git commits" [hash date subject author]
+  let selected = $commits
+    | tui-picker "Git commits" [hash date subject author] --preview {|row| commit-preview $row }
   $selected.hash?
 }
 
@@ -101,10 +106,8 @@ export def "select commit" --wrapped [
 export def "select file" --wrapped [
   ...rest
 ] {
-  let files = (^git status --porcelain ...$rest | lines | each {|line|
-    {status: ($line | str substring 0..1), path: ($line | str substring 3..)}
-  })
-  let selected = $files | tui-picker "Git changed files" [status path]
+  let selected = changed-files ...$rest
+    | tui-picker "Git changed files" [status path] --preview {|row| file-preview $row }
   $selected.path?
 }
 

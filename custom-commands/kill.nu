@@ -2,9 +2,11 @@ use ../tools/tui.nu [tui-picker]
 
 export def menu [] {
   let processes = (
-    ps
+    ps --long
     | sort-by mem --reverse
-    | tui-picker "Processes to kill" [pid name cpu mem] --multi
+    | tui-picker "Processes to kill" [pid name cpu mem] --multi --preview {|process|
+        $process | select --optional pid ppid name command cwd start_time | to yaml
+      }
   )
   if ($processes | is-empty) { return }
 

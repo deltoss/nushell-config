@@ -1,4 +1,5 @@
 use ../tools/tui.nu [tui-picker]
+use ../tools/git-preview.nu [changed-files file-preview]
 
 # Bring up interactive menu for AI operations
 export def menu [] {
@@ -98,14 +99,8 @@ export def macro --wrapped [...rest] {
 }
 
 def "select changed files" [] {
-  ^git status --porcelain
-  | lines
-  | each {|line| {
-      status: ($line | str substring 0..1)
-      path: ($line | str substring 3..)
-    }
-  }
-  | tui-picker "Select changed files" [status path] --multi
+  changed-files
+  | tui-picker "Select changed files" [status path] --multi --preview {|row| file-preview $row }
   | each {|row| $row.path }
 }
 
