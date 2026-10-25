@@ -10,12 +10,6 @@ def rows [items: list, path: list] {
   | each {|item| {label: $"($item.key) ($item.label)", path: ($path | append $item.key)}}
 }
 
-def tree [items: list] {
-  $items | reduce --fold {} {|item, result|
-    $result | insert $"($item.key) ($item.label)" (tree ($item.children? | default []))
-  }
-}
-
 def chord [key: string] {
   if $key =~ '^[A-Z]$' { $"shift+($key | str lowercase)" } else { $key }
 }
@@ -48,13 +42,15 @@ def shortcut [items: list, state: record, key: string] {
 }
 
 def enter [items: list, state: record] {
-  let path = if $state.focused == "menu-tree" {
-    let tree_path = ($state.values.menu-tree.path? | default "")
-    $tree_path | split row "/" | each {|part| $part | split row " " | first }
-  } else {
-    $state.values.choices.row.path? | default []
+  choose $items ($state.values.choices.row.path? | default [])
+}
+
+def descend [items: list, state: record] {
+  let path = ($state.values.choices.row.path? | default [])
+  let item = (item-at $items $path)
+  if ($item.children? | default [] | is-not-empty) {
+    rows $items $path
   }
-  choose $items $path
 }
 
 def back [items: list, state: record] {
@@ -64,19 +60,16 @@ def back [items: list, state: record] {
   }
 }
 
-# Keep the menu data separate from its interactive runner for headless tests.
 export def menu-ui [items: list] {
   let ui = (rows $items []
-    | tui label --titlebar "Commands"
-    | tui split --sizes [45% 1fr] [
-        (tui tree --id menu-tree --title "All commands" --data (tree $items))
-        (tui select --id choices --title "Current menu" --display label --focus)
-      ]
-    | tui label --status "letter: open/run  Enter: choose  Tab: tree  Backspace: back  q/Esc: quit")
+    | tui select --id choices --title "Leader" --display label --focus
+    | tui label --status "← back  → open  ↑↓ move  Enter choose  letters: shortcuts  q/Esc: quit")
   (chords $items | reduce --fold $ui {|key, app|
     $app | tui bind $key {|state| shortcut $items $state $key }
   })
   | tui bind enter {|state| enter $items $state }
+  | tui bind right {|state| descend $items $state }
+  | tui bind left {|state| back $items $state }
   | tui bind backspace {|state| back $items $state }
 }
 
