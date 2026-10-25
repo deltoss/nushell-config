@@ -1,7 +1,8 @@
-source ../env.nu
+use ../tools/yazi.nu [y]
 
 # Interactive launcher menu. Press a key to launch an app inline.
 export def --env main [] {
+  source ../env.nu
   let entries = [
     { key: 't', label: 'Nushell',                          action: {|| exec nu } }
     { key: 'T', label: 'Admin Nushell',                    action: {|| exec gsudo nu } }
@@ -40,4 +41,18 @@ export def --env main [] {
       }
     }
   }
+}
+
+export def menu-items [] {
+  [
+    {key: t, label: "Nushell", action: {|| ^nu}}
+    {key: T, label: "Admin Nushell", action: {|| ^gsudo nu}}
+    {key: n, label: "Neovim", action: {|| ^nvim}}
+    {key: y, label: "Yazi", action: {|| y}}
+    {key: p, label: "PowerShell", action: {|| ^pwsh -NoLogo}}
+    {key: P, label: "Admin PowerShell", action: {|| ^pwsh -NoProfile -NoLogo -c gsudo}}
+    {key: c, label: "Zellij: Configs", action: {|| ^nu -c "source ~/.config/nushell/tools/zellij.nu; zjC"}}
+    {key: N, label: "Zellij: Notes", action: {|| ^nu -c "source ~/.config/nushell/tools/zellij.nu; zjn"}}
+    {key: h, label: "HTTP Requests", action: {|| ^nu -c "cd ~/HTTP; nvim ."}}
+  ]
 }

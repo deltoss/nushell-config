@@ -1,29 +1,6 @@
+use ../tools/leader-tree.nu [run-menu]
 # Bring up interactive menu for zellij operations
-export def menu [] {
-  print $"(ansi bo)(ansi cyan)n(ansi bl) ⟶ (ansi reset)[(ansi bo)N(ansi reset)]ew Pane"
-  print $"(ansi bo)(ansi cyan)p(ansi bl) ⟶ (ansi reset)New [(ansi bo)P(ansi reset)]ane"
-  print $"(ansi bo)(ansi cyan)s(ansi bl) ⟶ (ansi reset)New [(ansi bo)S(ansi reset)]tack"
-  print $"(ansi bo)(ansi cyan)f(ansi bl) ⟶ (ansi reset)New [(ansi bo)F(ansi reset)]loat"
-  print $"(ansi bo)(ansi cyan)t(ansi bl) ⟶ (ansi reset)New [(ansi bo)T(ansi reset)]ab"
-  print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
-
-  loop {
-    let key = (input listen --types [key])
-    match [$key.code $key.modifiers] {
-      ['n', []] => { new pane; break }
-      ['p', []] => { new pane; break }
-      ['s', []] => { new stack; break }
-      ['f', []] => { new float; break }
-      ['t', []] => { new tab; break }
-      ['q', []] => { break }
-      ['esc', []] => { break }
-      ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
-      _ => {
-        print "That key wasn't recognized."
-      }
-    }
-  }
-}
+export def menu [] { run-menu (menu-items) }
 
 def "new pane" [] {
   ^zellij action new-pane --cwd $env.PWD --direction right --name '' -- nu | ignore
@@ -39,4 +16,14 @@ def "new stack" [] {
 
 def "new tab" [] {
   ^zellij action new-tab --cwd $env.PWD | ignore
+}
+
+export def menu-items [] {
+  [
+    {key: n, label: "[N]ew Pane", action: {|| new pane}}
+    {key: p, label: "New [P]ane", action: {|| new pane}}
+    {key: s, label: "New [S]tack", action: {|| new stack}}
+    {key: f, label: "New [F]loat", action: {|| new float}}
+    {key: t, label: "New [T]ab", action: {|| new tab}}
+  ]
 }

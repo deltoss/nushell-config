@@ -1,40 +1,9 @@
+use ../tools/leader-tree.nu [run-menu]
 use ../tools/tui.nu [tui-picker]
 use ../tools/git-preview.nu [changed-files file-preview]
 
 # Bring up interactive menu for AI operations
-export def menu [] {
-  print $"(ansi bo)(ansi cyan)a(ansi bl) ⟶ (ansi reset)[(ansi bo)A(ansi reset)]I"
-  print $"(ansi bo)(ansi cyan)e(ansi bl) ⟶ (ansi reset)[(ansi bo)E(ansi reset)]xecute shell command"
-  print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)Generate [(ansi bo)C(ansi reset)]ode"
-  print $"(ansi bo)(ansi cyan)s(ansi bl) ⟶ (ansi reset)Resume from existing [(ansi bo)S(ansi reset)]ession"
-  print $"(ansi bo)(ansi cyan)r(ansi bl) ⟶ (ansi reset)Start a [(ansi bo)R(ansi reset)]AG"
-  print $"(ansi bo)(ansi cyan)m(ansi bl) ⟶ (ansi reset)Start a [(ansi bo)M(ansi reset)]acro"
-  print $"(ansi bo)(ansi cyan)C(ansi bl) ⟶ (ansi reset)Suggest a [(ansi bo)C(ansi reset)]ommit message"
-  print $"(ansi bo)(ansi cyan)d(ansi bl) ⟶ (ansi reset)Review codebase [(ansi bo)D(ansi reset)]iffs"
-  print $"(ansi bo)(ansi cyan)S(ansi bl) ⟶ (ansi reset)Review codebase [(ansi bo)S(ansi reset)]tructure"
-  print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
-
-  loop {
-    let key = (input listen --types [key])
-    match [$key.code $key.modifiers] {
-      ['a', []] => { main; break }
-      ['e', []] => { execute; break }
-      ['c', []] => { code; break }
-      ['s', []] => { session; break }
-      ['r', []] => { rag; break }
-      ['m', []] => { macro; break }
-      ['C', ['keymodifiers(shift)']] => { suggest commit; break }
-      ['d', []] => { review diffs; break }
-      ['S', []] => { review structure; break }
-      ['q', []] => { break }
-      ['esc', []] => { break }
-      ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
-      _ => {
-        print "That key wasn't recognized."
-      }
-    }
-  }
-}
+export def menu [] { run-menu (menu-items) }
 
 def "select role" [] {
   let selected = (^aichat --list-roles | lines | each {|value| {value: $value} }
@@ -192,4 +161,18 @@ export def get-model [
 
   http get $url | save --progress $dest
   $dest
+}
+
+export def menu-items [] {
+  [
+    {key: a, label: "[A]I", action: {|| main}}
+    {key: e, label: "[E]xecute shell command", action: {|| execute}}
+    {key: c, label: "Generate [C]ode", action: {|| code}}
+    {key: s, label: "Resume from existing [S]ession", action: {|| session}}
+    {key: r, label: "Start a [R]AG", action: {|| rag}}
+    {key: m, label: "Start a [M]acro", action: {|| macro}}
+    {key: C, label: "Suggest a [C]ommit message", action: {|| suggest commit}}
+    {key: d, label: "Review codebase [D]iffs", action: {|| review diffs}}
+    {key: S, label: "Review codebase [S]tructure", action: {|| review structure}}
+  ]
 }

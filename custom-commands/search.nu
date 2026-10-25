@@ -1,3 +1,4 @@
+use ../tools/leader-tree.nu [run-menu]
 use ../tools/visual-studio.nu [devenv]
 use ./fzf-helpers.nu ['parse fzf']
 use ./open.nu
@@ -8,41 +9,7 @@ export def --env main []: nothing -> nothing {
 }
 
 # Bring up interactive menu for search operations
-export def --env menu []: nothing -> nothing {
-  print $"(ansi bo)(ansi cyan)e(ansi bl) ⟶ (ansi reset)[(ansi bo)E(ansi reset)]verything"
-  print $"(ansi bo)(ansi cyan)f(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]iles"
-  print $"(ansi bo)(ansi cyan)F(ansi bl) ⟶ (ansi reset)[(ansi bo)F(ansi reset)]iles in git repository"
-  print $"(ansi bo)(ansi cyan)g(ansi bl) ⟶ (ansi reset)[(ansi bo)G(ansi reset)]rep"
-  print $"(ansi bo)(ansi cyan)r(ansi bl) ⟶ (ansi reset)[(ansi bo)R(ansi reset)]epositories"
-  print $"(ansi bo)(ansi cyan)n(ansi bl) ⟶ .(ansi reset)[(ansi bo)N(ansi reset)]otes"
-  print $"(ansi bo)(ansi cyan)N(ansi bl) ⟶ .(ansi reset)[(ansi bo)N(ansi reset)]ET"
-  print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
-
-  mut result = {}
-  loop {
-    let key = (input listen --types [key])
-    match [$key.code $key.modifiers] {
-      ['e', []] => { $result = everything; break }
-      ['f', []] => { $result = files; break }
-      ['F', ['keymodifiers(shift)']] => { $result = repository files; break }
-      ['g', []] => { $result = grep; break }
-      ['r', []] => { $result = repositories; break }
-      ['n', []] => { $result = notes; break }
-      ['N', ['keymodifiers(shift)']] => { $result = .net; break }
-      ['q', []] => { break }
-      ['esc', []] => { break }
-      ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
-      _ => {
-        print "That key wasn't recognized."
-      }
-    }
-  }
-
-  if ($result.selections? | is-not-empty) {
-    print ''
-    $result.selections | open with
-  }
-}
+export def --env menu [] { run-menu (menu-items) }
 
 # Search for everything on your PC
 @example "With piped query" { ".json" | search everything }
@@ -172,4 +139,23 @@ export def "repository files" [] {
     $"(ansi red)($relative_path)(ansi reset)"
   }
   $repo_files | fzf --tac --header="Find - In Current Repository" --query $query --print-query --ansi --preview $env.FZF_CUSTOM_PREVIEW | parse fzf
+}
+
+def --env "open selection" [] {
+  let result = $in
+  if ($result.selections? | is-not-empty) {
+    $result.selections | open with
+  }
+}
+
+export def menu-items [] {
+  [
+    {key: e, label: "[E]verything", action: {|| everything | open selection}}
+    {key: f, label: "[F]iles", action: {|| files | open selection}}
+    {key: F, label: "[F]iles in git repository", action: {|| repository files | open selection}}
+    {key: g, label: "[G]rep", action: {|| grep | open selection}}
+    {key: r, label: "[R]epositories", action: {|| repositories | open selection}}
+    {key: n, label: ".[N]otes", action: {|| notes | open selection}}
+    {key: N, label: ".[N]ET", action: {|| .net | open selection}}
+  ]
 }
