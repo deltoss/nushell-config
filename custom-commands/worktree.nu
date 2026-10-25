@@ -1,3 +1,4 @@
+use ../tools/leader-tree.nu [run-menu]
 use ./git-helpers.nu [repo-folder, worktrees-folder]
 use ./git.nu ['select branch']
 use ../tools/tui.nu [tui-picker]
@@ -7,28 +8,7 @@ export def --env main [] {
 }
 
 # Bring up interactive git menu for custom git operations
-export def --env menu [] {
-  print $"(ansi bo)(ansi cyan)l(ansi bl) ⟶ (ansi reset)[(ansi bo)L(ansi reset)]ist worktrees"
-  print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)[(ansi bo)C(ansi reset)]hange"
-  print $"(ansi bo)(ansi cyan)a(ansi bl) ⟶ (ansi reset)[(ansi bo)A(ansi reset)]dd"
-  print $"(ansi bo)(ansi cyan)r(ansi bl) ⟶ (ansi reset)[(ansi bo)R(ansi reset)]emove"
-  print $"(ansi bo)(ansi cyan)q(ansi bl) ⟶ (ansi reset)[(ansi bo)Q(ansi reset)]uit"
-
-  loop {
-    let key = (input listen --types [key])
-    match [$key.code $key.modifiers] {
-      ['l', []] => { list | print; break }
-      ['c', []] => { change; break }
-      ['a', []] => { add; break }
-      ['r', []] => { remove; break }
-      ['q', []] => { break }
-      ['c', ['keymodifiers(control)']] => { print 'Terminated with Ctrl-C'; break }
-      _ => {
-        print "That key wasn't recognized."
-      }
-    }
-  }
-}
+export def --env menu [] { run-menu (menu-items) }
 
 # List git worktrees
 export def list [] {
@@ -205,4 +185,13 @@ export def --env remove [] {
 
   ^git worktree remove --force $chosen_path
   print $"(ansi green)Removed worktree: ($chosen_path)(ansi reset)"
+}
+
+export def menu-items [] {
+  [
+    {key: l, label: "[L]ist worktrees", action: {|| list | print}}
+    {key: c, label: "[C]hange", action: {|| change}}
+    {key: a, label: "[A]dd", action: {|| add}}
+    {key: r, label: "[R]emove", action: {|| remove}}
+  ]
 }

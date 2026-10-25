@@ -194,3 +194,17 @@ export def "log menu" --wrapped [
 
   log $selection.branch
 }
+
+export def menu-items [] {
+  [
+    {key: b, label: "Select git [B]ranch", action: {|| select branch | get --optional branch}}
+    {key: c, label: "Select git [C]ommit", action: {|| select commit}}
+    {key: f, label: "Select git [F]ile", action: {|| select file}}
+    {key: l, label: "Show git [L]og", action: {|| log}}
+    {key: g, label: "Lazy[G]it", action: {|| ^lazygit}}
+    {key: G, label: "Edit GitHub [G]ists", action: {|| ^gh gist edit}}
+    {key: m, label: "Resolve git [M]erge conflicts", action: {|| ^git mergetool}}
+    {key: p, label: "Open [P]ull request"}
+    {key: w, label: "[W]orktree", children: []}
+  ]
+}
