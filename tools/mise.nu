@@ -1,4 +1,4 @@
-job spawn {
-  mkdir ($nu.data-dir | path join "vendor/autoload")
-  mise activate nu | save -f ($nu.data-dir | path join "vendor/autoload/mise.nu")
-}
+use ./cache-init.nu
+
+# Activation embeds session state: always refresh, and finish before autoload reads it.
+cache-init mise [activate nu] --force

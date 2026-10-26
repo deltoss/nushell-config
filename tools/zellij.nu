@@ -56,7 +56,10 @@ if 'ZELLIJ' in $env {
   )
 
   $env.config.hooks.env_change.PWD = (
-    $env.config.hooks.env_change.PWD? | default [] | append {||
+    $env.config.hooks.env_change.PWD? | default [] | append {|before, after|
+      # Nu fires this once at startup with a null previous directory.
+      if $before == null or $before == $after { return }
+
       let focused = (
         ^zellij action dump-layout
         | lines
