@@ -65,11 +65,11 @@ Space toggles tickets. Actions use checked tickets, or the highlighted ticket if
 Copying uses Nushell's OSC 52 clipboard support and leaves the interface open.
 `ticket list` returns records for pipelines; `ticket pick --multi` returns selected records and closes.
 
-`ticket view` returns the Tickets tab with the same shortcuts, without calling `tui run`.
+`ticket widget` returns the Tickets tab with the same shortcuts, without calling `tui run`.
 Keep it in the outer pipeline when composing it with other tabs:
 
 ```nu
-ticket view | tui run
+ticket widget | tui run
 ```
 
 ## Vultr CLI

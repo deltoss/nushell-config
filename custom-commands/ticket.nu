@@ -144,10 +144,10 @@ def ticket-urls [site: string] {
 }
 
 # Build the Tickets tab and shortcuts without running the TUI.
-@example "Compose an interactive ticket view" {
-  ticket view | tui run
+@example "Compose an interactive ticket widget" {
+  ticket widget | tui run
 }
-export def view [
+export def widget [
   --all # Bypass the saved project and status filters
 ] {
   let site = base-url
@@ -175,7 +175,7 @@ export def view [
 export def ui [
   --all # Bypass the saved project and status filters
 ] {
-  view --all=$all
+  widget --all=$all
   | tui label --titlebar "Tickets"
   | tui label --status "Space: select  y: copy keys  Y: copy URLs  b: browse  /: search  q: quit"
   | tui run
