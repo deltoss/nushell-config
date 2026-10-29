@@ -136,11 +136,12 @@ export def widget [
   let ui = $in
   let site = base-url
   let tickets = list --all=$all | insert url {|ticket| $"($site)/browse/($ticket.key)" }
+  let columns = [key status priority name]
   $ui
   | tui tab "Tickets" [
       ($tickets
-        | tui search --id ticket-query --bind / --fuzzy --columns [key status priority name]
-        | tui table --id ticket-rows --focus --multi --columns [key status priority name])
+        | tui search --id ticket-query --bind / --fuzzy --columns $columns
+        | tui table --id ticket-rows --focus --multi --columns $columns)
     ]
   | tui-link-actions
 }

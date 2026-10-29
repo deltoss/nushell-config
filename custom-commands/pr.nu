@@ -14,18 +14,21 @@ export def list [
 }
 
 # Build the Pull requests tab and shortcuts without running the TUI.
-@example "Compose an interactive PR widget" { pr widget | tui run }
+@example "Compose an interactive PR widget" {
+  pr widget | tui run
+}
 export def widget [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
   --all # Include closed PRs
 ] {
   let ui = $in
   let prs = list --workspace $workspace --all=$all
+  let columns = [key role state author title]
   $ui
   | tui tab "Pull requests" [
       ($prs
-        | tui search --id pr-query --bind / --fuzzy --columns [key role state author title]
-        | tui table --id pr-rows --focus --multi --columns [key role state author title])
+        | tui search --id pr-query --bind / --fuzzy --columns $columns
+        | tui table --id pr-rows --focus --multi --columns $columns)
     ]
   | tui-link-actions
 }

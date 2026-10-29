@@ -15,11 +15,11 @@ def bitbucket-get [path: string, headers?: record] {
 def bitbucket-pages [path: string, headers?: record] {
   let headers = $headers | default { bitbucket-headers }
   mut next = $path
-  mut pages = []
+  mut visited = []
   mut rows = []
   while ($next | is-not-empty) {
-    if $next in $pages { error make {msg: "Bitbucket returned a repeated page URL"} }
-    $pages ++= [$next]
+    if $next in $visited { error make {msg: "Bitbucket returned a repeated page URL"} }
+    $visited ++= [$next]
     let page = bitbucket-get $next $headers
     $rows ++= $page.values
     $next = $page.next? | default '' | str replace --regex '^https://api\.bitbucket\.org/2\.0/' ''
@@ -56,6 +56,21 @@ export def "get repositories" [
     | select name slug
 }
 
+def pull-request-role [pr: record, user_id: string] {
+  if $pr.author.uuid == $user_id { return "Author" }
+
+  let is_reviewer = $pr.reviewers? | default []
+    | any {|reviewer| $reviewer.uuid == $user_id }
+  let participant = $pr.participants? | default []
+    | where user.uuid == $user_id | get --optional 0
+
+  if $is_reviewer or $participant.role? == "REVIEWER" {
+    "Reviewer"
+  } else if ($participant | is-not-empty) {
+    "Participant"
+  }
+}
+
 # Include authored PRs, assigned reviews, comments, and approvals.
 export def "get pull-requests" [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
@@ -66,43 +81,38 @@ export def "get pull-requests" [
   let workspaces = if ($workspace | is-not-empty) { [{slug: $workspace}] } else { get workspaces }
   let states = if $all { "state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED" } else { "state=OPEN" }
 
-  $workspaces | each --flatten {|workspace|
-    let workspace = $workspace.slug | url encode
-    bitbucket-pages $"repositories/($workspace)?role=member&pagelen=100" $headers
-    | each --flatten {|repo|
-        let path = $"repositories/($workspace)/($repo.slug | url encode)/pullrequests"
-        bitbucket-pages $"($path)?($states)&pagelen=50&sort=-updated_on" $headers
-        | each --flatten {|pr|
-            # Collection responses omit reviewers and participants.
-            let pr = if $pr.author.uuid == $user.uuid {
-              $pr
-            } else {
-              bitbucket-get $"($path)/($pr.id)" $headers
-            }
-            let participant = $pr.participants? | default []
-              | where user.uuid == $user.uuid | get --optional 0
-            let role = if $pr.author.uuid == $user.uuid {
-              "Author"
-            } else if ($pr.reviewers? | default [] | any {|reviewer| $reviewer.uuid == $user.uuid }) or $participant.role? == "REVIEWER" {
-              "Reviewer"
-            } else if ($participant | is-not-empty) {
-              "Participant"
-            } else {
-              return []
-            }
-            [{
-              key: $"($repo.full_name)#($pr.id)"
-              repository: $repo.full_name
-              title: $pr.title
-              state: (if $pr.state == "OPEN" and $pr.draft? == true { "DRAFT" } else { $pr.state })
-              role: $role
-              author: $pr.author.display_name
-              url: $pr.links.html.href
-              updated: ($pr.updated_on | into datetime)
-            }]
-          }
+  $workspaces
+  | each --flatten {|workspace|
+      let slug = $workspace.slug | url encode
+      bitbucket-pages $"repositories/($slug)?role=member&pagelen=100" $headers
+    }
+  | each --flatten {|repo|
+      let path = $"repositories/($repo.full_name)/pullrequests"
+      bitbucket-pages $"($path)?($states)&pagelen=50&sort=-updated_on" $headers
+    }
+  | each {|pr|
+      let repository = $pr.destination.repository.full_name
+      # Collection responses omit reviewers and participants.
+      let pr = if $pr.author.uuid == $user.uuid {
+        $pr
+      } else {
+        bitbucket-get $"repositories/($repository)/pullrequests/($pr.id)" $headers
       }
-  } | sort-by updated --reverse
+      let role = pull-request-role $pr $user.uuid
+      if ($role | is-empty) { return }
+
+      {
+        key: $"($repository)#($pr.id)"
+        repository: $repository
+        title: $pr.title
+        state: (if $pr.state == "OPEN" and $pr.draft? == true { "DRAFT" } else { $pr.state })
+        role: $role
+        author: $pr.author.display_name
+        url: $pr.links.html.href
+        updated: ($pr.updated_on | into datetime)
+      }
+    }
+  | sort-by updated --reverse
 }
 
 # Everything `pr review` needs to know about a Bitbucket pull request URL

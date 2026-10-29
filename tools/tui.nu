@@ -2,8 +2,14 @@ use std/clip
 
 def selected-links [state: record] {
   let selection = $state.values | get --optional $state.focused
-  if ($selection.row?.key? | is-empty) or ($selection.row?.url? | is-empty) { return [] }
-  if ($selection.checked? | is-not-empty) { $selection.checked } else { [$selection.row] }
+  let rows = if ($selection.checked? | is-not-empty) {
+    $selection.checked
+  } else {
+    [$selection.row?]
+  }
+  $rows | compact | where {|row|
+    ($row.key? | is-not-empty) and ($row.url? | is-not-empty)
+  }
 }
 
 # Copy and browse focused records with key and url fields.
@@ -12,14 +18,18 @@ export def tui-link-actions [] {
   $in
   | tui bind y {|state|
       let rows = selected-links $state
-      if ($rows | is-not-empty) { $rows | get key | str join "\n" | clip copy52 }
+      if ($rows | is-not-empty) {
+        $rows | get key | str join "\n" | clip copy52
+      }
     }
   | tui bind shift+y {|state|
       let rows = selected-links $state
-      if ($rows | is-not-empty) { $rows | get url | str join "\n" | clip copy52 }
+      if ($rows | is-not-empty) {
+        $rows | get url | str join "\n" | clip copy52
+      }
     }
   | tui bind b {|state|
-      for url in (selected-links $state | get --optional url) { start $url | ignore }
+      for url in (selected-links $state | get url) { start $url | ignore }
     }
 }
 
