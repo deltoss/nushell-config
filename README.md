@@ -47,6 +47,31 @@ secretspec --file ($nu.default-config-dir | path join "secretspec.toml") cache c
 
 Existing environment overrides (`JIRAAPIKEY`, `JIRABASEURL`, `ATLASSIANUSERNAME`, and `BITBUCKETAPIKEY`) still take priority. The cache stores real secret values in the OS keyring, not Git.
 
+## Ticket UI
+
+Run `ticket ui` to browse and copy tickets. It uses the projects and active statuses
+saved by `jira setup`; add `--all` to bypass them.
+
+Space toggles tickets. Actions use checked tickets, or the highlighted ticket if none are checked:
+
+| Key | Action |
+| --- | --- |
+| `y` | Copy ticket keys, one per line |
+| `Y` | Copy full URLs, one per line |
+| `b` | Open tickets in the browser |
+| `/` | Search |
+| `q` / `Esc` | Quit |
+
+Copying uses Nushell's OSC 52 clipboard support and leaves the interface open.
+`ticket list` returns records for pipelines; `ticket pick --multi` returns selected records and closes.
+
+`ticket view` returns the Tickets tab with the same shortcuts, without calling `tui run`.
+Keep it in the outer pipeline when composing it with other tabs:
+
+```nu
+ticket view | tui run
+```
+
 ## Vultr CLI
 
 Vultr commands use `VULTR_API_KEY` from the 1Password `Personal/Vultr/API Key` field, cached in the OS keyring by SecretSpec for 30 days. The key is not loaded by `env.nu`, stored in `.env.json`, or passed as a command-line argument.
