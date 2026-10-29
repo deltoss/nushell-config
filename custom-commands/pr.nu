@@ -34,7 +34,7 @@ export def widget [
 }
 
 # Browse and copy PRs without closing the interface after each action.
-export def ui [
+export def tui [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
   --all # Include closed PRs
 ] {

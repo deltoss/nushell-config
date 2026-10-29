@@ -147,7 +147,7 @@ export def widget [
 }
 
 # Browse and copy tickets without closing the interface after each action.
-export def ui [
+export def tui [
   --all # Bypass the saved project and status filters
 ] {
   widget --all=$all
