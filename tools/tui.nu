@@ -24,7 +24,7 @@ export def tui-picker [
   columns: list<string>
   --multi
   --preview: closure
-  --on-submit: closure # Receives the original selection and search query.
+  --on-submit: closure # Receives the original selection (possibly null) and search query.
   --on-new: closure # Ctrl+N: receives the query and returns a new record, or null to stay open.
 ] {
   let rows = $in
@@ -93,7 +93,7 @@ export def tui-picker [
   } else {
     [$submitted.__tui_picker_row]
   }
-  if $on_submit != null and ($selected | is-not-empty) {
+  if $on_submit != null {
     do $on_submit $selected $result.values.picker-query
   } else {
     $selected
