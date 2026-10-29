@@ -4,37 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is a personal Nushell configuration repository (`~/.config/nushell`). All files are written in Nushell's `.nu` language. The configuration targets both Windows and Linux OS. There are script paths gated behind `$nu.os-info.name` checks.
+Personal Nushell configuration for Windows and Linux.
 
 ## Code Style
 
-- 2-space indentation, spaces (not tabs), LF line endings, no trailing newline (see `.editorconfig`)
-- Nushell language. This is not a POSIX shell. Use `^` prefix to call external commands (e.g., `^git`, `^fzf`)
-- Interactive menus use a common pattern: print labeled options, `input listen --types [key]`, then `match [$key.code $key.modifiers]`
+- Follow [.editorconfig](./.editorconfig) for formatting.
+- Use Nushell syntax. Prefix intended external commands with `^` to avoid invoking wrappers.
+- Follow the surrounding code and reuse existing helpers.
+- Keep command help and examples beside their `.nu` definitions. Avoid duplicating command lists, keybindings, load order, or credential settings in Markdown.
 
 ## Architecture
 
-**Entry points:** Nushell loads `env.nu` first (environment variables, shell settings), then `config.nu` (sources everything else).
+Read [env.nu](./env.nu) and [config.nu](./config.nu) for startup behavior and load order.
 
-**`config.nu` load order:**
-1. `tools/tools.nu` — external tool integrations (`source` for env-modifying tools, `use` for command-providing tools; this is also where `git-wt`, `worktrunk`, `zoxide`, etc. are wired up)
-2. `custom-commands/` — user-facing commands loaded via `mod.nu` as modules
-3. `keybinds.nu`, `custom-completions/custom-completions.nu`, `aliases/aliases.nu` — only sourced `if $nu.is-interactive`
-4. A theme (`nu_scripts/themes/nu-themes/*`) is applied last
+- Put user-facing workflows in [custom-commands/](./custom-commands/); check its module exports before changing public commands.
+- Keep tool integrations and reusable helpers in [tools/](./tools/).
+- Read [secretspec.toml](./secretspec.toml) and [tools/secretspec.nu](./tools/secretspec.nu) for credential configuration and lookup.
+- See [autoload/](./autoload/) for user autoload scripts.
 
-Separately, `autoload/` is Nushell's user-autoload directory (see its own README): it loads automatically after `config.nu`, independently of the load order above, and is used to override vendor scripts (e.g. the zoxide override).
-
-**Key distinction — `tools/` vs `custom-commands/`:**
-- `tools/` wraps external CLI tools and sets up their environment. These are loaded via `source` (for env vars) or `use` (for commands).
-- `custom-commands/` contains user-facing workflow commands organized as Nushell modules (loaded via `mod.nu`). Each `.nu` file is a module. Helper files not exported in `mod.nu` are internal.
-
-**`nu_scripts/` is a git subtree** from [nushell/nu_scripts](https://github.com/nushell/nu_scripts). Do not edit files in this directory. For more information including how to update, see [README](./README.md) file
-
-**Environment secrets:** `.env.json` (gitignored) provides sensitive environment variables that's not in source control. Template is in `.env.json.template`.
-
-## Worktree Workflow
-
-Two parallel worktree systems exist:
-1. **`custom-commands/worktree.nu`** — Pure Nushell implementation with fzf-based selection (list/select/change/add/remove). The idea is it'd be a faster implementation for trivial and simple tasks for git worktrees.
-2. **`tools/git-wt.nu`** — Shell integration for the `git-wt` (worktrunk) external binary with directive-file-based cd. Aliased as `wt`.
-3. **`tools/worktrunk.nu`** — Convenience commands that combine both systems. Has custom Nushell commands to integrate AI with worktrunk
+[nu_scripts/](./nu_scripts/) is a vendored git subtree. Do not edit it directly.
+See [README.md](./README.md) for the update procedure.

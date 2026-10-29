@@ -3,7 +3,7 @@ use ./jira.nu [setup]
 use ./search.nu
 use ./git.nu
 use ./worktree-apps.nu
-use ../tools/tui.nu [tui-picker]
+use ../tools/tui.nu [tui-picker tui-link-actions]
 
 # Capture the browser opener before ticket start shadows it.
 alias open-browser = start
@@ -124,6 +124,37 @@ export def pick [
     }
   }
   $selected
+}
+
+# Build the Tickets tab and shortcuts without running the TUI.
+@example "Compose an interactive ticket widget" {
+  ticket widget | tui run
+}
+export def widget [
+  --all # Bypass the saved project and status filters
+] {
+  let ui = $in
+  let site = base-url
+  let tickets = list --all=$all | insert url {|ticket| $"($site)/browse/($ticket.key)" }
+  let columns = [key status priority name]
+  $ui
+  | tui tab "Tickets" [
+      ($tickets
+        | tui search --id ticket-query --bind / --fuzzy --columns $columns
+        | tui table --id ticket-rows --focus --multi --columns $columns)
+    ]
+  | tui-link-actions
+}
+
+# Browse and copy tickets without closing the interface after each action.
+export def tui [
+  --all # Bypass the saved project and status filters
+] {
+  widget --all=$all
+  | tui label --titlebar "Tickets"
+  | tui label --status "Space: select  y: copy keys  Y: copy URLs  b: browse  /: search  q: quit"
+  | tui run
+  | ignore
 }
 
 def branch-summary-words [text: string] {

@@ -1,9 +1,5 @@
 # User Autoload
 
-This is the user autoload directory. This gets loaded:
-- After autoloading the `$nu.vendor-autoload-dirs`
-- After loading your `config.nu`
-
-It is useful to override any vendor scripts.
+User autoload scripts live here. Refer to Nushell's documentation for startup ordering.
 
 See [Nushell - Configuration - Launch Stages](https://www.nushell.sh/book/configuration.html#launch-stages)

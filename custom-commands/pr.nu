@@ -2,7 +2,48 @@ use std/log
 use ./git-helpers.nu [ repo-info, pr-reviews-folder ]
 use ./git.nu
 use ./worktree-apps.nu
-use ./bitbucket.nu [ pr-info ]
+use ./bitbucket.nu [ pr-info, "get pull-requests" ]
+use ../tools/tui.nu [tui-link-actions]
+
+# List open Bitbucket PRs you authored, review, commented on, or approved.
+export def list [
+  --workspace: string # Limit to one workspace; defaults to all your workspaces
+  --all # Include closed PRs
+] {
+  get pull-requests --workspace $workspace --all=$all
+}
+
+# Build the Pull requests tab and shortcuts without running the TUI.
+@example "Compose an interactive PR widget" {
+  pr widget | tui run
+}
+export def widget [
+  --workspace: string # Limit to one workspace; defaults to all your workspaces
+  --all # Include closed PRs
+] {
+  let ui = $in
+  let prs = list --workspace $workspace --all=$all
+  let columns = [key role state author title]
+  $ui
+  | tui tab "Pull requests" [
+      ($prs
+        | tui search --id pr-query --bind / --fuzzy --columns $columns
+        | tui table --id pr-rows --focus --multi --columns $columns)
+    ]
+  | tui-link-actions
+}
+
+# Browse and copy PRs without closing the interface after each action.
+export def tui [
+  --workspace: string # Limit to one workspace; defaults to all your workspaces
+  --all # Include closed PRs
+] {
+  widget --workspace $workspace --all=$all
+  | tui label --titlebar "Pull requests"
+  | tui label --status "Space: select  y: copy IDs  Y: copy URLs  b: browse  /: search  q: quit"
+  | tui run
+  | ignore
+}
 
 def resolve-dest-branch [dest_branch?: string] {
   $dest_branch | default {

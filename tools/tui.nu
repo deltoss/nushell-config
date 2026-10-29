@@ -1,3 +1,38 @@
+use std/clip
+
+def selected-links [state: record] {
+  let selection = $state.values | get --optional $state.focused
+  let rows = if ($selection.checked? | is-not-empty) {
+    $selection.checked
+  } else {
+    [$selection.row?]
+  }
+  $rows | compact | where {|row|
+    ($row.key? | is-not-empty) and ($row.url? | is-not-empty)
+  }
+}
+
+# Copy and browse focused records with key and url fields.
+# Shared handlers let independently built tabs use the same shortcuts.
+export def tui-link-actions [] {
+  $in
+  | tui bind y {|state|
+      let rows = selected-links $state
+      if ($rows | is-not-empty) {
+        $rows | get key | str join "\n" | clip copy52
+      }
+    }
+  | tui bind shift+y {|state|
+      let rows = selected-links $state
+      if ($rows | is-not-empty) {
+        $rows | get url | str join "\n" | clip copy52
+      }
+    }
+  | tui bind b {|state|
+      for url in (selected-links $state | get url) { start $url | ignore }
+    }
+}
+
 # Keep the original record separate from display-only column labels.
 def display-rows [columns: list<string>] {
   $in | each {|row|
