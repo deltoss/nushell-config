@@ -3,8 +3,7 @@ use ./jira.nu [setup]
 use ./search.nu
 use ./git.nu
 use ./worktree-apps.nu
-use ../tools/tui.nu [tui-picker]
-use std/clip
+use ../tools/tui.nu [tui-picker tui-link-actions]
 
 # Capture the browser opener before ticket start shadows it.
 alias open-browser = start
@@ -127,22 +126,6 @@ export def pick [
   $selected
 }
 
-def selected-tickets [state: record] {
-  if $state.focused != "ticket-rows" { return [] }
-  let selection = $state.values.ticket-rows
-  if ($selection.checked | is-not-empty) {
-    $selection.checked
-  } else if ($selection.row | is-not-empty) {
-    [$selection.row]
-  } else {
-    []
-  }
-}
-
-def ticket-urls [site: string] {
-  $in | each {|ticket| $"($site)/browse/($ticket.key)" }
-}
-
 # Build the Tickets tab and shortcuts without running the TUI.
 @example "Compose an interactive ticket widget" {
   ticket widget | tui run
@@ -150,25 +133,16 @@ def ticket-urls [site: string] {
 export def widget [
   --all # Bypass the saved project and status filters
 ] {
+  let ui = $in
   let site = base-url
-  list --all=$all
+  let tickets = list --all=$all | insert url {|ticket| $"($site)/browse/($ticket.key)" }
+  $ui
   | tui tab "Tickets" [
-      (tui search --id ticket-query --bind / --fuzzy --columns [key status priority name])
-      (tui table --id ticket-rows --focus --multi --columns [key status priority name])
+      ($tickets
+        | tui search --id ticket-query --bind / --fuzzy --columns [key status priority name]
+        | tui table --id ticket-rows --focus --multi --columns [key status priority name])
     ]
-  | tui bind y {|state|
-      let tickets = selected-tickets $state
-      if ($tickets | is-not-empty) { $tickets | get key | str join "\n" | clip copy52 }
-    }
-  | tui bind shift+y {|state|
-      let tickets = selected-tickets $state
-      if ($tickets | is-not-empty) { $tickets | ticket-urls $site | str join "\n" | clip copy52 }
-    }
-  | tui bind b {|state|
-      for url in (selected-tickets $state | ticket-urls $site) {
-        open-browser $url | ignore
-      }
-    }
+  | tui-link-actions
 }
 
 # Browse and copy tickets without closing the interface after each action.

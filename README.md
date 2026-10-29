@@ -72,6 +72,23 @@ Keep it in the outer pipeline when composing it with other tabs:
 ticket widget | tui run
 ```
 
+## Pull request UI
+
+`pr list` returns open Bitbucket PRs you authored, are reviewing, commented on, or approved,
+across repositories in your workspaces. `pr ui` opens the interactive view; `pr widget`
+returns the tab and shortcuts without running it. Add `--workspace <slug>` to limit the
+workspace, or `--all` to include closed PRs.
+
+Use Space to select, `y` to copy `workspace/repository#id`, `Y` to copy full URLs,
+`b` to browse, and `/` to search. The existing Bitbucket token needs read access to
+your user, workspaces, repositories, and pull requests.
+
+Widgets can be piped together before running the TUI:
+
+```nu
+ticket widget | pr widget | tui run
+```
+
 ## Vultr CLI
 
 Vultr commands use `VULTR_API_KEY` from the 1Password `Personal/Vultr/API Key` field, cached in the OS keyring by SecretSpec for 30 days. The key is not loaded by `env.nu`, stored in `.env.json`, or passed as a command-line argument.
