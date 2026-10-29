@@ -182,18 +182,36 @@ def default-base-branch [] {
   $head.stdout | str trim
 }
 
-def --env enter-ticket-worktree [base: string, worktree: path] {
+def --env enter-ticket-worktree [base: string, worktree: path, mode: string = "edit", ticket_key: string = ""] {
   cd $worktree
   try {
-    worktree-apps launch $base $worktree --edit
+    if $mode == "ai" {
+      let selection = (
+        ["Yes" "No"]
+        | tui label --titlebar "Use Plannotator?"
+        | tui select
+        | tui run --dialog
+      )
+      if $selection.action != "submit" { return }
+
+      let plan_args = if $selection.selected == "Yes" { ["--plan"] } else { [] }
+      let prompt = $"/skill:implement-with-intent Jira ticket ($ticket_key). Read the ticket via MCP. Before changing code, summarize your understanding of the intent and ask me for additional context or constraints. Wait for my response before implementing."
+      if ($env.ZELLIJ? | is-not-empty) {
+        ^zellij action new-pane --cwd $worktree --stacked --close-on-exit --name $ticket_key -- pi ...$plan_args $prompt
+      } else {
+        ^pi ...$plan_args $prompt
+      }
+    } else {
+      worktree-apps launch $base $worktree --edit
+    }
   } catch {|err|
     # Return normally so --env preserves the directory change even if a launcher fails.
-    print --stderr $"Changed to worktree ($worktree), but launching apps failed: ($err.msg)"
+    print --stderr $"Changed to worktree ($worktree), but launching tools failed: ($err.msg)"
   }
 }
 
 # Start a Jira ticket in a new Worktrunk worktree and change the calling shell's directory.
-def --env start-ticket [] {
+def --env start-ticket [mode: string = "edit"] {
   source ../tools/git-wt.nu
 
   let ticket = pick
@@ -226,7 +244,7 @@ def --env start-ticket [] {
   }
   if ($created | is-empty) { return }
 
-  enter-ticket-worktree $created.base $created.worktree
+  enter-ticket-worktree $created.base $created.worktree $mode $ticket.key
 }
 
 # Resume an existing checkout, prefilling the editable search query with the ticket key.
@@ -252,4 +270,5 @@ def --env resume-ticket [] {
 # Keep aliases after imports and sourced scripts so their built-in open/start calls stay intact.
 export alias open = open-ticket
 export alias start = start-ticket
+export def --env ai [] { start-ticket ai }
 export alias resume = resume-ticket
