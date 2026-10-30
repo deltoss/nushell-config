@@ -5,7 +5,7 @@ use ./worktree-apps.nu
 use ./bitbucket.nu [ pr-info, "get pull-requests" ]
 use ../tools/tui.nu [tui-link-actions]
 
-# List open Bitbucket PRs you authored, review, commented on, or approved.
+# List open Bitbucket PRs you authored.
 export def list [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
   --all # Include closed PRs
@@ -13,7 +13,8 @@ export def list [
   get pull-requests --workspace $workspace --all=$all
 }
 
-# Build the Pull requests tab and shortcuts without running the TUI.
+# Build the PR search, table and shortcuts without running the TUI.
+# Display prefixes the title with 👤 when you're the author, or 👾 otherwise.
 @example "Compose an interactive PR widget" {
   pr widget | tui run
 }
@@ -21,15 +22,16 @@ export def widget [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
   --all # Include closed PRs
 ] {
-  let ui = $in
   let prs = list --workspace $workspace --all=$all
-  let columns = [key role state author title]
-  $ui
-  | tui tab "Pull requests" [
-      ($prs
-        | tui search --id pr-query --bind / --fuzzy --columns $columns
-        | tui table --id pr-rows --focus --multi --columns $columns)
-    ]
+  let columns = [State Display]
+  # Keep raw fields for copy/browse alongside display labels.
+  $prs | each {|row|
+    let author_icon = if $row.role == Author { '👤' } else { '👾' }
+    $row | merge ($row | rename --block { str pascal-case })
+      | insert Display $"($author_icon) ($row.title)"
+  }
+  | tui search --id pr-query --bind / --fuzzy --columns $columns
+  | tui table --id pr-rows --focus --multi --columns $columns
   | tui-link-actions
 }
 
@@ -39,7 +41,6 @@ export def tui [
   --all # Include closed PRs
 ] {
   widget --workspace $workspace --all=$all
-  | tui label --titlebar "Pull requests"
   | tui label --status "Space: select  y: copy IDs  Y: copy URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore

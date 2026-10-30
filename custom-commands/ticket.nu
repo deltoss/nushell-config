@@ -53,17 +53,25 @@ def assigned-ticket-jql [
 # Fetch raw Jira issues using the saved project and status filters.
 def assigned-tickets [
   --all # Bypass the saved project and status filters
+  --priority-keys: list<string> # Fetch this loaded set in Jira's priority order
 ] {
-  let choices = if $all { {} } else { setup }
-  if not $all and ($choices | is-empty) { return [] }
-  let account_id = if $all { jira-account-id } else { $choices.account_id }
+  let jql = if $priority_keys != null {
+    if ($priority_keys | is-empty) { return [] }
+    let keys = $priority_keys | each { to json --raw } | str join ", "
+    "key IN (" + $keys + ") ORDER BY priority DESC, updated DESC, created ASC"
+  } else {
+    let choices = if $all { {} } else { setup }
+    if not $all and ($choices | is-empty) { return [] }
+    let account_id = if $all { jira-account-id } else { $choices.account_id }
+    assigned-ticket-jql $account_id $choices
+  }
   let site = base-url
   let headers = {
     accept: application/json
     authorization: $"Basic (jira-basic-token)"
   }
   mut request = {
-    jql: (assigned-ticket-jql $account_id $choices)
+    jql: $jql
     fields: [summary priority status]
     maxResults: 50
   }
@@ -126,23 +134,40 @@ export def pick [
   $selected
 }
 
-# Build the Tickets tab and shortcuts without running the TUI.
+# Build the ticket search, table and shortcuts without running the TUI.
+# s cycles Default, Status (A–Z), Priority (highest first); unmark rows before sorting.
 @example "Compose an interactive ticket widget" {
   ticket widget | tui run
 }
 export def widget [
   --all # Bypass the saved project and status filters
 ] {
-  let ui = $in
   let site = base-url
   let tickets = list --all=$all | insert url {|ticket| $"($site)/browse/($ticket.key)" }
-  let columns = [key status priority name]
-  $ui
-  | tui tab "Tickets" [
-      ($tickets
-        | tui search --id ticket-query --bind / --fuzzy --columns $columns
-        | tui table --id ticket-rows --focus --multi --columns $columns)
-    ]
+  let priority_order = assigned-tickets --all=$all --priority-keys ($tickets | get key)
+    | enumerate | reduce --fold {} {|issue, order| $order | upsert $issue.item.key $issue.index }
+  let columns = [Key Status Priority Name]
+  # Keep raw fields for copy/browse alongside display labels.
+  let rows = $tickets | each {|row|
+    $row | merge ($row | rename --block { str pascal-case })
+      | insert __ticket_priority_rank ($priority_order | get --optional $row.key | default ($priority_order | columns | length))
+      | insert __ticket_sort 0
+  }
+  $rows
+  | tui search --id ticket-query --bind / --fuzzy --columns $columns
+  | tui table --id ticket-rows --focus --multi --columns $columns
+  | tui bind s {|state|
+      let selection = $state.values.ticket-rows
+      # shortcut: block sorting marked rows until the TUI supports identity-based checks.
+      if ($selection.row? | is-empty) or ($selection.checked? | is-not-empty) { return }
+      let mode = ($selection.row.__ticket_sort + 1) mod 3
+      let sorted = match $mode {
+        1 => ($rows | sort-by --ignore-case status)
+        2 => ($rows | sort-by __ticket_priority_rank)
+        _ => $rows
+      }
+      $sorted | update __ticket_sort $mode
+    }
   | tui-link-actions
 }
 
@@ -151,8 +176,7 @@ export def tui [
   --all # Bypass the saved project and status filters
 ] {
   widget --all=$all
-  | tui label --titlebar "Tickets"
-  | tui label --status "Space: select  y: copy keys  Y: copy URLs  b: browse  /: search  q: quit"
+  | tui label --status "s: sort (unmark first)  Space: mark  y: copy keys  Y: URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore
 }

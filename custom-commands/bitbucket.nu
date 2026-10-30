@@ -9,7 +9,7 @@ def bitbucket-headers [] {
 }
 
 def bitbucket-get [path: string, headers?: record] {
-  http get --headers ($headers | default { bitbucket-headers }) $"https://api.bitbucket.org/2.0/($path)"
+  http get --max-time 30sec --headers ($headers | default { bitbucket-headers }) $"https://api.bitbucket.org/2.0/($path)"
 }
 
 def bitbucket-pages [path: string, headers?: record] {
@@ -28,9 +28,14 @@ def bitbucket-pages [path: string, headers?: record] {
 }
 
 export def "get workspaces" [] {
-  bitbucket-pages "user/permissions/workspaces?pagelen=100"
-    | select workspace.uuid workspace.slug workspace.name
-    | rename id slug name
+  bitbucket-pages "user/workspaces?pagelen=100"
+    | each {|entry|
+        {
+          id: $entry.workspace.uuid
+          slug: $entry.workspace.slug
+          name: ($entry.workspace.name? | default $entry.workspace.slug)
+        }
+      }
 }
 
 export def "select workspace" [] {
@@ -56,22 +61,7 @@ export def "get repositories" [
     | select name slug
 }
 
-def pull-request-role [pr: record, user_id: string] {
-  if $pr.author.uuid == $user_id { return "Author" }
-
-  let is_reviewer = $pr.reviewers? | default []
-    | any {|reviewer| $reviewer.uuid == $user_id }
-  let participant = $pr.participants? | default []
-    | where user.uuid == $user_id | get --optional 0
-
-  if $is_reviewer or $participant.role? == "REVIEWER" {
-    "Reviewer"
-  } else if ($participant | is-not-empty) {
-    "Participant"
-  }
-}
-
-# Include authored PRs, assigned reviews, comments, and approvals.
+# List PRs you authored without scanning every repository.
 export def "get pull-requests" [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
   --all # Include merged, declined, and superseded PRs
@@ -84,29 +74,17 @@ export def "get pull-requests" [
   $workspaces
   | each --flatten {|workspace|
       let slug = $workspace.slug | url encode
-      bitbucket-pages $"repositories/($slug)?role=member&pagelen=100" $headers
-    }
-  | each --flatten {|repo|
-      let path = $"repositories/($repo.full_name)/pullrequests"
+      let path = $"workspaces/($slug)/pullrequests/($user.uuid | url encode)"
       bitbucket-pages $"($path)?($states)&pagelen=50&sort=-updated_on" $headers
     }
   | each {|pr|
       let repository = $pr.destination.repository.full_name
-      # Collection responses omit reviewers and participants.
-      let pr = if $pr.author.uuid == $user.uuid {
-        $pr
-      } else {
-        bitbucket-get $"repositories/($repository)/pullrequests/($pr.id)" $headers
-      }
-      let role = pull-request-role $pr $user.uuid
-      if ($role | is-empty) { return }
-
       {
         key: $"($repository)#($pr.id)"
         repository: $repository
         title: $pr.title
         state: (if $pr.state == "OPEN" and $pr.draft? == true { "DRAFT" } else { $pr.state })
-        role: $role
+        role: Author
         author: $pr.author.display_name
         url: $pr.links.html.href
         updated: ($pr.updated_on | into datetime)
