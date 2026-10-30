@@ -61,22 +61,19 @@ export def "get repositories" [
     | select name slug
 }
 
-# List PRs you authored without scanning every repository.
+# List up to 20 recent PRs you authored, including closed PRs.
 export def "get pull-requests" [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include merged, declined, and superseded PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
+  let workspace = $workspace | default --empty { select workspace | get --optional slug }
+  if ($workspace | is-empty) { return [] }
   let headers = bitbucket-headers
   let user_id = bitbucket-get user $headers | get uuid | url encode
-  let workspaces = if ($workspace | is-not-empty) { [{slug: $workspace}] } else { get workspaces }
-  let states = if $all { "state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED" } else { "state=OPEN" }
+  let slug = $workspace | url encode
+  let states = "state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED"
 
-  $workspaces
-  | each --flatten {|workspace|
-      let slug = $workspace.slug | url encode
-      let path = $"workspaces/($slug)/pullrequests/($user_id)"
-      bitbucket-pages $"($path)?($states)&pagelen=50&sort=-updated_on" $headers
-    }
+  bitbucket-get $"workspaces/($slug)/pullrequests/($user_id)?($states)&pagelen=20&sort=-updated_on" $headers
+  | get values
   | each {|pr|
       let repository = $pr.destination.repository.full_name
       {

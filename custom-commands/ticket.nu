@@ -1,4 +1,4 @@
-use ./atlassian-helpers.nu [jira-basic-token, base-url, jira-account-id]
+use ./atlassian-helpers.nu [jira-basic-token, base-url]
 use ./jira.nu [setup]
 use ./search.nu
 use ./git.nu
@@ -31,63 +31,19 @@ def open-ticket [] {
   }
 }
 
-# Build JQL without fetching credentials, configuration, or issues.
-def assigned-ticket-jql [
-  account_id: string
-  choices: record # Empty to search across all projects and statuses
-] {
-  # WAS does not support currentUser(); use a quoted account ID instead.
-  let quoted_account_id = $account_id | to json --raw
-  let ticket_filter = if ($choices | is-not-empty) {
-    let projects = $choices.project_ids | each {|id| $id | into string | to json --raw} | str join ", "
-    let statuses = $choices.active_status_ids | each {|id| $id | into string | to json --raw} | str join ", "
-    " AND project IN (" + $projects + ") AND status IN (" + $statuses + ")"
-  } else {
-    ""
-  }
-  ("(assignee = currentUser() OR assignee WAS " + $quoted_account_id + ")"
-    + $ticket_filter
-    + " ORDER BY updated DESC, created ASC")
-}
-
-# Fetch every page for a JQL query.
+# Fetch up to 20 issues for a JQL query.
 def search-tickets [jql: string] {
   let site = base-url
   let headers = {
     accept: application/json
     authorization: $"Basic (jira-basic-token)"
   }
-  mut request = {
+  http post --content-type application/json --headers $headers $"($site)/rest/api/3/search/jql" {
     jql: $jql
     fields: [summary priority status]
-    maxResults: 50
+    maxResults: 20
   }
-  mut issues = []
-
-  loop {
-    let page = http post --content-type application/json --headers $headers $"($site)/rest/api/3/search/jql" $request
-    $issues ++= $page.issues
-    let next_page = $page | get --optional nextPageToken
-    if ($page | get --optional isLast | default false) or ($next_page | is-empty) {
-      break
-    }
-    if $next_page == ($request | get --optional nextPageToken) {
-      error make {msg: "Jira returned a repeated pagination token"}
-    }
-    $request = ($request | upsert nextPageToken $next_page)
-  }
-
-  $issues
-}
-
-# Fetch raw Jira issues using the saved project and status filters.
-def assigned-tickets [
-  --all # Bypass the saved project and status filters
-] {
-  let choices = if $all { {} } else { setup }
-  if not $all and ($choices | is-empty) { return [] }
-  let account_id = if $all { jira-account-id } else { $choices.account_id }
-  search-tickets (assigned-ticket-jql $account_id $choices)
+  | get issues
 }
 
 # Jira defines the priority order; rank only the tickets already loaded.
@@ -98,14 +54,20 @@ def priority-ranks [keys: list<string>] {
     | enumerate | reduce --fold {} {|issue, order| $order | upsert $issue.item.key $issue.index }
 }
 
-# List Jira tickets currently or previously assigned to you.
-#
-# On first use, choose projects and active statuses. Both choices survive shell restarts.
-# Run `jira setup --configure` to change them.
-export def list [
-  --all # Bypass the saved project and status filters
-] {
-  assigned-tickets --all=$all | each {|issue|
+# List up to 20 recent active Jira tickets assigned to you now or previously, or reported by you.
+# Run `jira setup --configure` to change projects and completed statuses.
+export def list [] {
+  let choices = setup
+  if ($choices | is-empty) { return [] }
+  let projects = $choices.project_ids | each { into string | to json --raw } | str join ", "
+  let done_statuses = $choices.done_status_ids | each { into string | to json --raw } | str join ", "
+  let jql = [
+    "(assignee = currentUser() OR assignee was currentUser() OR reporter = currentUser())"
+    ("AND project IN (" + $projects + ")")
+    ("AND status NOT IN (" + $done_statuses + ")")
+    "ORDER BY updated DESC, created ASC"
+  ] | str join " "
+  search-tickets $jql | each {|issue|
     {
       key: $issue.key
       name: $issue.fields.summary
@@ -120,11 +82,10 @@ export def list [
 # Type to search, press Enter to confirm, or Esc to cancel.
 # Add --browse to open the selection without changing the return value.
 export def pick [
-  --all # Bypass the saved project and status filters
   --multi(-m) # Select multiple tickets; Space toggles a ticket, Enter confirms
   --browse # Open each selected ticket in the browser
 ] {
-  let tickets = list --all=$all
+  let tickets = list
   if ($tickets | is-empty) { return }
 
   let selected = $tickets | tui-picker "Select tickets" [key status priority name] --multi=$multi
@@ -144,11 +105,9 @@ export def pick [
 @example "Compose an interactive ticket widget" {
   ticket widget | tui run
 }
-export def widget [
-  --all # Bypass the saved project and status filters
-] {
+export def widget [] {
   let site = base-url
-  let tickets = list --all=$all | insert url {|ticket| $"($site)/browse/($ticket.key)" }
+  let tickets = list | insert url {|ticket| $"($site)/browse/($ticket.key)" }
   let priority_ranks = priority-ranks ($tickets | get key)
   let fallback_rank = $priority_ranks | columns | length
   let columns = [Key Status Priority Name]
@@ -183,10 +142,8 @@ export def widget [
 }
 
 # Browse and copy tickets without closing the interface after each action.
-export def tui [
-  --all # Bypass the saved project and status filters
-] {
-  widget --all=$all
+export def tui [] {
+  widget
   | tui label --status "s: sort (unmark first)  Space: mark  y: copy keys  Y: URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore

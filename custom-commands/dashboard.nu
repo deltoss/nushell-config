@@ -4,7 +4,7 @@ def layout-path [path: string] {
   $path | str replace --all '\' '/' | to json --raw
 }
 
-# Browse tickets and authored pull requests in side-by-side Zellij panes.
+# Browse up to 20 tickets and 20 authored PRs in side-by-side Zellij panes.
 # Opens a new tab inside Zellij, or starts a session outside it.
 # Alt+Arrow moves between panes with the current Zellij configuration.
 @example "Choose a workspace and open the dashboard" {
@@ -15,7 +15,6 @@ def layout-path [path: string] {
 }
 export def main [
   --workspace: string # Workspace slug; choose interactively when omitted
-  --all # Bypass saved ticket filters and include closed pull requests
 ] {
   if (which zellij | is-empty) {
     error make {msg: "zellij is required to open the dashboard"}
@@ -26,8 +25,8 @@ export def main [
   const commands_dir = path self .
   let ticket_module = $commands_dir | path join ticket.nu | str replace --all '\' '/'
   let pr_module = $commands_dir | path join pr.nu | str replace --all '\' '/'
-  let ticket_command = $"use ($ticket_module | to nuon); ticket tui --all=($all)"
-  let pr_command = $"use ($pr_module | to nuon); pr tui --workspace ($workspace | to nuon) --all=($all)"
+  let ticket_command = $"use ($ticket_module | to nuon); ticket tui"
+  let pr_command = $"use ($pr_module | to nuon); pr tui --workspace ($workspace | to nuon)"
   let executable = layout-path $nu.current-exe
   let cwd = layout-path $env.PWD
   # nu -c skips user startup files unless they are explicitly supplied.

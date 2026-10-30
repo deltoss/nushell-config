@@ -5,12 +5,11 @@ use ./worktree-apps.nu
 use ./bitbucket.nu [ pr-info, "get pull-requests" ]
 use ../tools/tui.nu [tui-link-actions]
 
-# List open Bitbucket PRs you authored.
+# List up to 20 recent Bitbucket PRs you authored, including closed PRs.
 export def list [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include closed PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
-  get pull-requests --workspace $workspace --all=$all
+  get pull-requests --workspace $workspace
 }
 
 # Build the PR search, table and shortcuts without running the TUI.
@@ -18,12 +17,11 @@ export def list [
   pr widget | tui run
 }
 export def widget [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include closed PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
   let columns = [State Display]
   # Keep raw fields for copy/browse alongside display labels.
-  list --workspace $workspace --all=$all | each {|pr|
+  list --workspace $workspace | each {|pr|
     { ...$pr, State: $pr.state, Display: $"👤 ($pr.title)" }
   }
   | tui search --id pr-query --bind / --fuzzy --columns $columns
@@ -33,10 +31,9 @@ export def widget [
 
 # Browse and copy PRs without closing the interface after each action.
 export def tui [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include closed PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
-  widget --workspace $workspace --all=$all
+  widget --workspace $workspace
   | tui label --status "Space: select  y: copy IDs  Y: copy URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore
