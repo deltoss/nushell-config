@@ -54,7 +54,7 @@ def fetch-projects [site: string headers: record] {
   mut projects = []
   mut start_at = 0
   loop {
-    let page = http get --headers $headers $"($site)/rest/api/3/project/search?action=browse&startAt=($start_at)&maxResults=100"
+    let page = http get --max-time 30sec --headers $headers $"($site)/rest/api/3/project/search?action=browse&startAt=($start_at)&maxResults=100"
     $projects ++= $page.values
     if $page.isLast or ($page.values | is-empty) { break }
     $start_at += ($page.values | length)
@@ -65,7 +65,7 @@ def fetch-projects [site: string headers: record] {
 # Projects share statuses across issue types, so merge them by status ID.
 def fetch-project-statuses [site: string headers: record projects: table] {
   $projects | each {|project|
-    let issue_types = http get --headers $headers $"($site)/rest/api/3/project/($project.id)/statuses"
+    let issue_types = http get --max-time 30sec --headers $headers $"($site)/rest/api/3/project/($project.id)/statuses"
     if ($issue_types | is-empty) { [] } else { $issue_types | get statuses | flatten }
   }
   | flatten

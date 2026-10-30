@@ -70,7 +70,7 @@ def assigned-tickets [
   mut issues = []
 
   loop {
-    let page = http post --content-type application/json --headers $headers $"($site)/rest/api/3/search/jql" $request
+    let page = http post --max-time 30sec --content-type application/json --headers $headers $"($site)/rest/api/3/search/jql" $request
     $issues ++= $page.issues
     let next_page = $page | get --optional nextPageToken
     if ($page | get --optional isLast | default false) or ($next_page | is-empty) {

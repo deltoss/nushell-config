@@ -30,7 +30,7 @@ export def jira-basic-token [] {
 
 # Get the authenticated Jira account
 export def jira-account [] {
-  http get --headers {
+  http get --max-time 30sec --headers {
     accept: application/json
     authorization: $"Basic (jira-basic-token)"
   } $"(base-url)/rest/api/3/myself"

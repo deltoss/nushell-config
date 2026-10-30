@@ -13,6 +13,7 @@ export def main [
   --workspace: string # Limit pull requests to one workspace
   --all # Bypass saved ticket filters and include closed pull requests
 ] {
+  print --stderr "Loading tickets..."
   ticket widget --all=$all
   | pr widget --workspace $workspace --all=$all
   | tui label --titlebar "Dashboard"

@@ -9,7 +9,7 @@ def bitbucket-headers [] {
 }
 
 def bitbucket-get [path: string, headers?: record] {
-  http get --headers ($headers | default { bitbucket-headers }) $"https://api.bitbucket.org/2.0/($path)"
+  http get --max-time 30sec --headers ($headers | default { bitbucket-headers }) $"https://api.bitbucket.org/2.0/($path)"
 }
 
 def bitbucket-pages [path: string, headers?: record] {

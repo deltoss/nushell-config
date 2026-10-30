@@ -22,11 +22,15 @@ export def widget [
   --all # Include closed PRs
 ] {
   let ui = $in
-  let prs = list --workspace $workspace --all=$all
   let columns = [key role state author title]
   $ui
   | tui tab "Pull requests" [
-      ($prs
+      # Defer the scan until tui run reads the stream in the background.
+      ([0] | each --flatten {
+          try { list --workspace $workspace --all=$all } catch {|err|
+            {state: "Error", title: $err.msg}
+          }
+        }
         | tui search --id pr-query --bind / --fuzzy --columns $columns
         | tui table --id pr-rows --focus --multi --columns $columns)
     ]
