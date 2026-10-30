@@ -14,7 +14,6 @@ export def list [
 }
 
 # Build the PR search, table and shortcuts without running the TUI.
-# Display prefixes the title with 👤 when you're the author, or 👾 otherwise.
 @example "Compose an interactive PR widget" {
   pr widget | tui run
 }
@@ -22,13 +21,10 @@ export def widget [
   --workspace: string # Limit to one workspace; defaults to all your workspaces
   --all # Include closed PRs
 ] {
-  let prs = list --workspace $workspace --all=$all
   let columns = [State Display]
   # Keep raw fields for copy/browse alongside display labels.
-  $prs | each {|row|
-    let author_icon = if $row.role == Author { '👤' } else { '👾' }
-    $row | merge ($row | rename --block { str pascal-case })
-      | insert Display $"($author_icon) ($row.title)"
+  list --workspace $workspace --all=$all | each {|pr|
+    { ...$pr, State: $pr.state, Display: $"👤 ($pr.title)" }
   }
   | tui search --id pr-query --bind / --fuzzy --columns $columns
   | tui table --id pr-rows --focus --multi --columns $columns

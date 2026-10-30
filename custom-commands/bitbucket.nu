@@ -67,14 +67,14 @@ export def "get pull-requests" [
   --all # Include merged, declined, and superseded PRs
 ] {
   let headers = bitbucket-headers
-  let user = bitbucket-get user $headers
+  let user_id = bitbucket-get user $headers | get uuid | url encode
   let workspaces = if ($workspace | is-not-empty) { [{slug: $workspace}] } else { get workspaces }
   let states = if $all { "state=OPEN&state=MERGED&state=DECLINED&state=SUPERSEDED" } else { "state=OPEN" }
 
   $workspaces
   | each --flatten {|workspace|
       let slug = $workspace.slug | url encode
-      let path = $"workspaces/($slug)/pullrequests/($user.uuid | url encode)"
+      let path = $"workspaces/($slug)/pullrequests/($user_id)"
       bitbucket-pages $"($path)?($states)&pagelen=50&sort=-updated_on" $headers
     }
   | each {|pr|

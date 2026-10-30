@@ -50,21 +50,8 @@ def assigned-ticket-jql [
     + " ORDER BY updated DESC, created ASC")
 }
 
-# Fetch raw Jira issues using the saved project and status filters.
-def assigned-tickets [
-  --all # Bypass the saved project and status filters
-  --priority-keys: list<string> # Fetch this loaded set in Jira's priority order
-] {
-  let jql = if $priority_keys != null {
-    if ($priority_keys | is-empty) { return [] }
-    let keys = $priority_keys | each { to json --raw } | str join ", "
-    "key IN (" + $keys + ") ORDER BY priority DESC, updated DESC, created ASC"
-  } else {
-    let choices = if $all { {} } else { setup }
-    if not $all and ($choices | is-empty) { return [] }
-    let account_id = if $all { jira-account-id } else { $choices.account_id }
-    assigned-ticket-jql $account_id $choices
-  }
+# Fetch every page for a JQL query.
+def search-tickets [jql: string] {
   let site = base-url
   let headers = {
     accept: application/json
@@ -91,6 +78,24 @@ def assigned-tickets [
   }
 
   $issues
+}
+
+# Fetch raw Jira issues using the saved project and status filters.
+def assigned-tickets [
+  --all # Bypass the saved project and status filters
+] {
+  let choices = if $all { {} } else { setup }
+  if not $all and ($choices | is-empty) { return [] }
+  let account_id = if $all { jira-account-id } else { $choices.account_id }
+  search-tickets (assigned-ticket-jql $account_id $choices)
+}
+
+# Jira defines the priority order; rank only the tickets already loaded.
+def priority-ranks [keys: list<string>] {
+  if ($keys | is-empty) { return {} }
+  let keys = $keys | each { to json --raw } | str join ", "
+  search-tickets ("key IN (" + $keys + ") ORDER BY priority DESC, updated DESC, created ASC")
+    | enumerate | reduce --fold {} {|issue, order| $order | upsert $issue.item.key $issue.index }
 }
 
 # List Jira tickets currently or previously assigned to you.
@@ -144,21 +149,27 @@ export def widget [
 ] {
   let site = base-url
   let tickets = list --all=$all | insert url {|ticket| $"($site)/browse/($ticket.key)" }
-  let priority_order = assigned-tickets --all=$all --priority-keys ($tickets | get key)
-    | enumerate | reduce --fold {} {|issue, order| $order | upsert $issue.item.key $issue.index }
+  let priority_ranks = priority-ranks ($tickets | get key)
+  let fallback_rank = $priority_ranks | columns | length
   let columns = [Key Status Priority Name]
   # Keep raw fields for copy/browse alongside display labels.
   let rows = $tickets | each {|row|
-    $row | merge ($row | rename --block { str pascal-case })
-      | insert __ticket_priority_rank ($priority_order | get --optional $row.key | default ($priority_order | columns | length))
-      | insert __ticket_sort 0
+    {
+      ...$row
+      Key: $row.key
+      Status: $row.status
+      Priority: $row.priority
+      Name: $row.name
+      __ticket_priority_rank: ($priority_ranks | get --optional $row.key | default $fallback_rank)
+      __ticket_sort: 0
+    }
   }
   $rows
   | tui search --id ticket-query --bind / --fuzzy --columns $columns
   | tui table --id ticket-rows --focus --multi --columns $columns
   | tui bind s {|state|
       let selection = $state.values.ticket-rows
-      # shortcut: block sorting marked rows until the TUI supports identity-based checks.
+      # Checked rows use positions, so keep their order until they are unmarked.
       if ($selection.row? | is-empty) or ($selection.checked? | is-not-empty) { return }
       let mode = ($selection.row.__ticket_sort + 1) mod 3
       let sorted = match $mode {
