@@ -2,7 +2,8 @@ use ../tools/leader-tree.nu [run-menu]
 use ../tools/tui.nu [tui-picker]
 use ../tools/git-preview.nu [changed-files file-preview]
 
-# Bring up interactive menu for AI operations
+# Open the AI command menu.
+@example "Choose an AI action" { ai menu }
 export def menu [] { run-menu (menu-items) }
 
 def "select role" [] {
@@ -17,6 +18,8 @@ def "select model" [] {
   if ($selected | is-empty) { [] } else { ["--model", $selected.value] }
 }
 
+# Chat with AI, choosing a model and role when prompted.
+@example "Ask a question" { ai "Explain this project's architecture" }
 export def main --wrapped [...rest] {
   let no_args = ($rest | is-empty)
   let single_plain_arg = (($rest | length) == 1 and not ($rest | first | str starts-with "-"))
@@ -33,17 +36,20 @@ export def main --wrapped [...rest] {
   }
 }
 
-# Execute a shell command
+# Ask AIChat to generate and run a shell command.
+@example "Describe a command to run" { ai execute "Show disk usage" }
 export def execute --wrapped [...rest] {
   ^aichat --session --execute ...$rest
 }
 
-# Generate some code
+# Ask AIChat to generate code.
+@example "Generate a Nushell expression" { ai code "Sort a table by its name column in Nushell" }
 export def code --wrapped [...rest] {
   ^aichat --session --code ...$rest
 }
 
-# Resume from a interactively selected session
+# Resume an AIChat session chosen from a list.
+@example "Choose a session to resume" { ai session }
 export def session --wrapped [...rest] {
   let selected = (^aichat --list-sessions | lines | each {|value| {value: $value} }
     | tui-picker "AI sessions" [value])
@@ -51,7 +57,8 @@ export def session --wrapped [...rest] {
   ^aichat --session $selected.value ...$rest
 }
 
-# Start a RAG
+# Chat with a selected AIChat knowledge base.
+@example "Choose a knowledge base" { ai rag }
 export def rag [...rest] {
   let selected = (^aichat --list-rags | lines | each {|value| {value: $value} }
     | tui-picker "AI RAGs" [value])
@@ -59,7 +66,8 @@ export def rag [...rest] {
   ^aichat --rag $selected.value ...$rest
 }
 
-# Start a macro
+# Run a selected AIChat macro.
+@example "Choose a macro to run" { ai macro }
 export def macro --wrapped [...rest] {
   let selected = (^aichat --list-macros | lines | each {|value| {value: $value} }
     | tui-picker "AI macros" [value])
@@ -73,7 +81,8 @@ def "select changed files" [] {
   | each {|row| $row.path }
 }
 
-# Suggests a git commit message
+# Suggest a commit message for selected Git changes.
+@example "Draft a commit message" { ai suggest commit }
 export def "suggest commit" [
   --session: string = ""
 ] {
@@ -105,12 +114,14 @@ export def "suggest commit" [
   ^aichat --session $session_name $final_prompt
 }
 
-# Review your code structure
+# Ask AIChat to review the current project's directory structure.
+@example "Review the project layout" { ai review structure }
 export def "review structure" [] {
   ^eza --recurse --tree --git-ignore | ^aichat --session "Analyze this project structure and suggest improvements in the context of software development."
 }
 
-# Review your git changes
+# Ask AIChat to review selected Git changes.
+@example "Review changed files" { ai review diffs }
 export def "review diffs" [
   --session: string = ""
 ] {
@@ -163,6 +174,8 @@ export def get-model [
   $dest
 }
 
+# Return AI menu entries for composition.
+@example "Inspect the menu labels" { ai menu-items | get label }
 export def menu-items [] {
   [
     {key: a, label: "[A]I", action: {|| main}}

@@ -1,3 +1,6 @@
+# Ask Pi to explain recent Zellij terminal output after editing the prompt.
+@example "Explain the last command's output" { huh }
+@example "Include output from several commands" { huh 3 }
 export def main [count: int = 1 --mark: string = "❯"] {
   let all = (zellij action dump-screen --full | lines)
 

@@ -1,5 +1,7 @@
 use ../tools/tui.nu [tui-picker]
 
+# Select processes to force-kill after confirmation.
+@example "Choose processes to terminate" "kill menu"
 export def menu [] {
   let processes = (
     ps --long

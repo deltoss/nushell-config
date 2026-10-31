@@ -9,11 +9,14 @@ def "get folder" [] {
 }
 
 # Open plain paths or search hits containing path, line, and column fields.
+@example "Choose how to open a file" { "config.nu" | open with }
+@example "Open a search hit at its location" { {path: "config.nu", line: 10, column: 1} | open with }
 export def --env with []: string -> nothing, list<string> -> nothing, record -> nothing, table -> nothing {
   $in | menu
 }
 
-# Run a program for stdin interactively
+# Choose an application or directory action for piped paths.
+@example "Choose how to open several files" { ["config.nu" "env.nu"] | open menu }
 export def --env menu []: string -> nothing, list<string> -> nothing, record -> nothing, table -> nothing {
   let input = $in
   if ($input | is-empty) { return }

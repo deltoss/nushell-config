@@ -8,6 +8,8 @@ use ./quick-launch.nu
 use ./pr.nu
 use ../tools/leader-tree.nu [run-menu]
 
+# Return the top-level launcher entries for composition.
+@example "Inspect the launcher labels" { leader menu-items | get label }
 export def menu-items [] {
   let git_items = (git menu-items | each {|item|
     match $item.key {
@@ -26,4 +28,6 @@ export def menu-items [] {
   ]
 }
 
+# Open the command launcher.
+@example "Browse available actions" { leader menu }
 export def --env menu [] { run-menu (menu-items) }

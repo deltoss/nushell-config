@@ -3,12 +3,14 @@ use ../tools/visual-studio.nu [devenv]
 use ./fzf-helpers.nu ['parse fzf']
 use ./open.nu
 
-# Search for items
+# Open the file and repository search menu.
+@example "Choose a search" { search }
 export def --env main []: nothing -> nothing {
   menu
 }
 
-# Bring up interactive menu for search operations
+# Choose a search and open its results.
+@example "Open the search menu" { search menu }
 export def --env menu [] { run-menu (menu-items) }
 
 # Search for everything on your PC
@@ -45,6 +47,7 @@ export def files []: string -> record, nothing -> record {
 }
 
 # Search for .NET solutions on your PC
+@example "Find a solution by name" { "api" | search .net }
 export def ".net" []: string -> record, nothing -> record {
   let query = $in | default ''
   let results = match $nu.os-info.name {
@@ -64,12 +67,14 @@ export def ".net" []: string -> record, nothing -> record {
 }
 
 # Search for notes on your PC
+@example "Find notes by topic" { "nushell" | search notes }
 export def "notes" []: string -> record, nothing -> record {
   let query = $in | default ''
   fd . ("~/Documents/Note Taking" | path expand) ("~/Documents/Org Notes" | path expand) | fzf --header="Search - Obsidian Notes" --print-query --query $query --preview $env.FZF_CUSTOM_PREVIEW | parse fzf
 }
 
 # Search for file content in current directory
+@example "Find text and choose matching lines" { "TODO" | search grep }
 export def "grep" []: string -> record, nothing -> record {
   let query = $in | default ''
   const helper = path self "grep-helpers.nu"
@@ -91,6 +96,7 @@ export def "grep" []: string -> record, nothing -> record {
 }
 
 # Search for git repositories on your PC
+@example "Find repositories and worktrees by name" { "api" | search repositories --include-worktrees }
 export def "repositories" [
   --preferred: string # Show this repository first when it is among the search results
   --include-worktrees # Include linked worktrees and other .git-file checkouts
@@ -130,6 +136,7 @@ export def "repositories" [
 }
 
 # Search for files in the current git repository
+@example "Find files in the repository" { "config" | search repository files }
 export def "repository files" [] {
   let query = $in | default ''
   let repo_root = ^git rev-parse --show-toplevel
@@ -148,6 +155,8 @@ def --env "open selection" [] {
   }
 }
 
+# Return search menu entries for composition.
+@example "Inspect the menu labels" { search menu-items | get label }
 export def menu-items [] {
   [
     {key: e, label: "[E]verything", action: {|| everything | open selection}}

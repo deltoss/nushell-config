@@ -5,14 +5,17 @@ use ./worktree-apps.nu
 use ./bitbucket.nu [ pr-info, "get pull-requests" ]
 use ../tools/tui.nu [tui-link-actions]
 
-# List up to 20 recent Bitbucket PRs you authored, including closed PRs.
+# List your authored Bitbucket pull requests.
+@example "List PRs in a workspace" {
+  pr list --workspace my-team
+}
 export def list [
   --workspace: string # Workspace slug; choose interactively when omitted
 ] {
   get pull-requests --workspace $workspace
 }
 
-# Build the PR search, table and shortcuts without running the TUI.
+# Build a pull request widget for composition.
 @example "Compose an interactive PR widget" {
   pr widget | tui run
 }
@@ -29,7 +32,10 @@ export def widget [
   | tui-link-actions
 }
 
-# Browse and copy PRs without closing the interface after each action.
+# Browse your Bitbucket pull requests interactively.
+@example "Open the PR browser for a workspace" {
+  pr tui --workspace my-team
+}
 export def tui [
   --workspace: string # Workspace slug; choose interactively when omitted
 ] {
@@ -47,6 +53,10 @@ def resolve-dest-branch [dest_branch?: string] {
   }
 }
 
+# Build the URL for opening a pull request from the current branch.
+@example "Get a PR creation URL targeting main" {
+  pr url main
+}
 export def url [
   dest_branch?: string # Destination branch to create a pull request for
   repo_info?: record # The repo information
@@ -71,7 +81,6 @@ export def url [
   }
 }
 
-# Clone the repo as a bare clone if it isn't there yet.
 # One bare clone is shared by every PR worktree of that repo.
 def ensure-bare-clone [bare_dir: string, clone_url: string] {
   if ($bare_dir | path exists) {
@@ -86,7 +95,6 @@ def ensure-bare-clone [bare_dir: string, clone_url: string] {
   ^git -C $bare_dir config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 }
 
-# Turn a PR title into a filesystem-friendly folder name fragment
 def slugify [text: string] {
   $text
     | str lowercase
@@ -95,8 +103,7 @@ def slugify [text: string] {
     | str trim --char '-'
 }
 
-# Find the PR's existing worktree folder (so a retitled PR reuses it),
-# or derive a fresh `<id>-<title-slug>` name from the current title
+# Reuse the checkout even if the PR title changes.
 def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
   let existing = if ($repo_dir | path exists) {
     ls --short-names $repo_dir
@@ -110,7 +117,6 @@ def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
   $existing | get --optional 0 | default ($repo_dir | path join $"($pr_id)-(slugify $title)")
 }
 
-# Add a worktree for the branch if it isn't there yet
 def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
   if ($target_dir | path exists) {
     return
@@ -133,6 +139,10 @@ def open-hunk-pane [dest_branch: string, worktree: string] {
   }
 }
 
+# Open review tools for the current branch against a destination branch.
+@example "Review the current branch against main" {
+  pr self-review main
+}
 export def self-review [dest_branch: string] {
   let worktree = (^git rev-parse --show-toplevel | str trim)
   ^git fetch origin $dest_branch
@@ -155,12 +165,12 @@ export def self-review [dest_branch: string] {
   }
 }
 
-# Check out a pull request into a dedicated worktree under ~/PRs.
-# Clones the repo once per repository (bare clone at ~/PRs/<repo>/.bare), then
-# adds a worktree per PR (~/PRs/<repo>/<pr-id>-<title-slug>), so reviewing more
-# PRs of the same repo never re-clones. Re-running for the same PR syncs the
-# worktree to the latest commits instead.
-# To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
+# Check out a Bitbucket pull request and open review tools.
+#
+# Reuses an existing checkout when reviewing the same PR again.
+@example "Review a Bitbucket PR" {
+  pr review https://bitbucket.org/my-team/my-repo/pull-requests/123
+}
 export def --env review [
   pr_url: string # Pull request URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
   --mode: list<string>@available-review-modes # Diff tools to open after checkout. Prompts when omitted
@@ -187,8 +197,12 @@ export def --env review [
   worktree-apps launch $"origin/($pr.dest_branch)" $target_dir $mode
 }
 
-# Raise a git pull request for the current repository
+# Open the browser to create a pull request for the current branch.
+#
 # Runs pre-pr-raise handlers with the URL and destination branch. Returning false cancels the page.
+@example "Create a PR targeting main" {
+  pr main
+}
 export def main [dest_branch?: string]: nothing -> nothing {
   let resolved_dest = resolve-dest-branch $dest_branch
   if ($resolved_dest | is-empty) {
