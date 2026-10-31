@@ -4,6 +4,8 @@ def layout-path [path: string] {
   $path | str replace --all '\' '/' | to json --raw
 }
 
+# Open the work dashboard in Zellij.
+#
 # Opens a new tab inside Zellij, or starts a session outside it.
 @example "Choose a workspace and open the dashboard" {
   dashboard

@@ -1,5 +1,6 @@
 use ../tools/leader-tree.nu [run-menu]
-# Bring up interactive menu for zellij operations
+# Open the Zellij pane and tab menu.
+@example "Choose a Zellij action" { zellij menu }
 export def menu [] { run-menu (menu-items) }
 
 def "new pane" [] {
@@ -18,6 +19,8 @@ def "new tab" [] {
   ^zellij action new-tab --cwd $env.PWD | ignore
 }
 
+# Return Zellij menu entries for composition.
+@example "Inspect the menu labels" { zellij menu-items | get label }
 export def menu-items [] {
   [
     {key: n, label: "[N]ew Pane", action: {|| new pane}}

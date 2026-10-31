@@ -1,7 +1,8 @@
 use ../tools/tui.nu [tui-picker]
 use ../tools/git-preview.nu [changed-files file-preview commit-preview branch-preview]
 
-# Bring up interactive menu for custom git operations
+# Open the Git command menu.
+@example "Choose a Git action" { git menu }
 export def menu [] {
   print $"(ansi bo)(ansi cyan)b(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)B(ansi reset)]ranch"
   print $"(ansi bo)(ansi cyan)c(ansi bl) ⟶ (ansi reset)Select git [(ansi bo)C(ansi reset)]ommit"
@@ -57,8 +58,10 @@ def --wrapped branch-rows [...rest] {
     }
 }
 
-# Select a branch, or press Ctrl+N to create a new branch.
+# Choose a Git branch or enter a new branch name.
+#
 # Returns {query, branch} so callers can distinguish new and existing branches.
+@example "Choose a branch, preferring main" { git select branch --preferred main }
 export def "select branch" --wrapped [
   --extra: list<string> = []
   --preferred: string # Show this branch first without adding a duplicate
@@ -90,7 +93,8 @@ export def "select branch" --wrapped [
   {query: $name, branch: null}
 }
 
-# Select a git commit's hash
+# Choose a Git commit and return its hash.
+@example "Choose a commit" { git select commit }
 export def "select commit" --wrapped [
   ...rest
 ] {
@@ -102,7 +106,8 @@ export def "select commit" --wrapped [
   $selected.hash?
 }
 
-# Select a changed file's path
+# Choose a changed Git file and return its path.
+@example "Choose a changed file" { git select file }
 export def "select file" --wrapped [
   ...rest
 ] {
@@ -149,7 +154,8 @@ def "nu-complete refs-or-files" [] {
   }
 }
 
-# Log with more readable formatting
+# Display Git history as a formatted commit graph.
+@example "Show history for main" { git log main }
 export def log --wrapped [
   ...rest: string@"nu-complete refs-or-files"
 ] {
@@ -164,8 +170,10 @@ export def log --wrapped [
   ^git log ...$args
 }
 
-# Log with Nushell table
+# Return Git history as a Nushell table.
+#
 # See: https://www.nushell.sh/cookbook/parsing_git_log.html
+@example "Read commit messages as data" { git log table | get message }
 export def "log table" --wrapped [
   ...rest
 ] {
@@ -185,7 +193,8 @@ export def "log table" --wrapped [
   | upsert date {|d| $d.date | into datetime}
 }
 
-# Log a branch interactively with a branch menu
+# Choose a branch and display its Git history.
+@example "Browse a branch's history" { git log menu }
 export def "log menu" --wrapped [
   ...rest
 ] {
@@ -195,6 +204,8 @@ export def "log menu" --wrapped [
   log $selection.branch
 }
 
+# Return Git menu entries for composition.
+@example "Inspect the menu labels" { git menu-items | get label }
 export def menu-items [] {
   [
     {key: b, label: "Select git [B]ranch", action: {|| select branch | get --optional branch}}

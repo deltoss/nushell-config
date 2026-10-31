@@ -8,6 +8,8 @@ def --wrapped pup-json [...args: string] {
   $result.stdout | from json
 }
 
+# Find Datadog monitors matching a search.
+#
 # Authenticate with `pup auth login` first. Pup manages the site and credentials.
 # DATADOG_MONITOR_QUERY sets the default search; --query overrides it.
 @example "Find production alerts" {
@@ -48,6 +50,7 @@ def display-rows [query?: string] {
   }
 }
 
+# Build a Datadog monitor widget for composition.
 @example "Compose an interactive Datadog widget" {
   datadog widget | tui run
 }
@@ -66,6 +69,7 @@ export def widget [
   | tui-link-actions
 }
 
+# Browse Datadog monitors interactively.
 @example "Browse monitors needing attention" {
   datadog tui
 }

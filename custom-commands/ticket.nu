@@ -8,7 +8,10 @@ use ../tools/tui.nu [tui-picker tui-link-actions]
 # Capture the browser opener before ticket start shadows it.
 alias open-browser = start
 
-# Get ticket information from current branch
+# Get the Jira ticket key and URL from the current branch.
+@example "Read the current branch's ticket" {
+  ticket info
+}
 export def info [] {
   let current_branch = ^git rev-parse --abbrev-ref HEAD
   let match = ($current_branch | parse --regex $env.PROJECTMANAGEMENTKEYPATTERN)
@@ -24,6 +27,8 @@ export def info [] {
   print "No issue number found from the current branch name"
 }
 
+# Open the current branch's Jira ticket in the browser.
+@example "Open the current ticket" { ticket open }
 def open-ticket [] {
   let issue_info = info
   if ($issue_info | is-not-empty) {
@@ -53,7 +58,12 @@ def priority-ranks [keys: list<string>] {
     | enumerate | reduce --fold {} {|issue, order| $order | upsert $issue.item.key $issue.index }
 }
 
+# List Jira tickets using your saved project and status choices.
+#
 # Run `jira setup --configure` to change projects and completed statuses.
+@example "List matching tickets" {
+  ticket list
+}
 export def list [] {
   let choices = setup
   if ($choices | is-empty) { return [] }
@@ -76,7 +86,11 @@ export def list [] {
 }
 
 # Pick Jira tickets, returning the selected record or records.
+#
 # Add --browse to open the selection without changing the return value.
+@example "Choose tickets and return their keys" {
+  ticket pick --multi | get key
+}
 export def pick [
   --multi(-m) # Select multiple tickets; Space toggles a ticket, Enter confirms
   --browse # Open each selected ticket in the browser
@@ -96,6 +110,7 @@ export def pick [
   $selected
 }
 
+# Build a Jira ticket widget for composition.
 @example "Compose an interactive ticket widget" {
   ticket widget | tui run
 }
@@ -135,6 +150,10 @@ export def widget [] {
   | tui-link-actions
 }
 
+# Browse Jira tickets interactively.
+@example "Open the ticket browser" {
+  ticket tui
+}
 export def tui [] {
   widget
   | tui label --status "s: sort (unmark first)  Space: mark  y: copy keys  Y: URLs  b: browse  /: search  q: quit"
@@ -209,6 +228,7 @@ def --env enter-ticket-worktree [base: string, worktree: path] {
 }
 
 # Start a Jira ticket in a new Worktrunk worktree and change the calling shell's directory.
+@example "Choose a ticket and start work" { ticket start }
 def --env start-ticket [] {
   source ../tools/git-wt.nu
 
@@ -246,6 +266,7 @@ def --env start-ticket [] {
 }
 
 # Resume an existing checkout, prefilling the editable search query with the ticket key.
+@example "Choose a ticket and resume its worktree" { ticket resume }
 def --env resume-ticket [] {
   let ticket = pick
   if ($ticket | is-empty) { return }

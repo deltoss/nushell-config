@@ -3,14 +3,18 @@ use ./git-helpers.nu [repo-folder, worktrees-folder]
 use ./git.nu ['select branch']
 use ../tools/tui.nu [tui-picker]
 
+# Open the Git worktree menu.
+@example "Manage worktrees for the current repository" { worktree }
 export def --env main [] {
   menu
 }
 
-# Bring up interactive git menu for custom git operations
+# Choose a Git worktree action.
+@example "Open the worktree menu" { worktree menu }
 export def --env menu [] { run-menu (menu-items) }
 
-# List git worktrees
+# List worktrees for the current Git repository.
+@example "Read worktree paths" { worktree list | get path }
 export def list [] {
   let output = git worktree list --porcelain | str trim
   let entries = $output | split row "\n\n"
@@ -57,11 +61,14 @@ export def list [] {
   }
 }
 
+# Choose a Git worktree and return its record.
+@example "Choose a worktree" { worktree select }
 export def select [] {
   list | tui-picker "Git worktrees" [branch commit_short relative_path]
 }
 
-# Switch to the directory of a git worktree
+# Change the shell's directory to a selected Git worktree.
+@example "Switch worktrees" { worktree change }
 export def --env change [] {
   let chosen_worktree = select
   if ($chosen_worktree | is-empty) {
@@ -72,7 +79,8 @@ export def --env change [] {
   print $"(ansi green)Changed to worktree: ($chosen_worktree.path)(ansi reset)"
 }
 
-# Adds a git worktree and change to its directory
+# Create a Git worktree and change the shell's directory to it.
+@example "Choose a branch and create a worktree" { worktree add }
 export def --env add [] {
   let worktree_path = worktrees-folder
   if ($worktree_path | is-empty) {
@@ -168,7 +176,8 @@ export def --env add [] {
   }
 }
 
-# Remove a git worktree
+# Remove a selected Git worktree, including uncommitted changes.
+@example "Choose a worktree to remove" { worktree remove }
 export def --env remove [] {
   let chosen_worktree = select
   if ($chosen_worktree | is-empty) {
@@ -187,6 +196,8 @@ export def --env remove [] {
   print $"(ansi green)Removed worktree: ($chosen_path)(ansi reset)"
 }
 
+# Return worktree menu entries for composition.
+@example "Inspect the menu labels" { worktree menu-items | get label }
 export def menu-items [] {
   [
     {key: l, label: "[L]ist worktrees", action: {|| list | print}}

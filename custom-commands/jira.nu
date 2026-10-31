@@ -70,7 +70,11 @@ def fetch-project-statuses [site: string headers: record projects: table] {
 }
 
 # Choose Jira projects and the completed statuses to exclude from ticket lists.
+#
 # Choices persist per site and account; cancellation returns nothing.
+@example "Change the saved ticket filters" {
+  jira setup --configure
+}
 export def setup [
   --configure # Choose projects and completed statuses again; cancellation keeps the saved choices
 ] {
@@ -79,12 +83,22 @@ export def setup [
   load-or-configure-choices $site $account_id --configure=$configure
 }
 
+# Get your saved Jira project IDs.
+#
 # Prompts for setup on first use.
+@example "Read the selected projects" {
+  jira selected-project-ids
+}
 export def selected-project-ids [] {
   setup | get --optional project_ids | default []
 }
 
+# Get the Jira status IDs selected as completed.
+#
 # Prompts for setup on first use.
+@example "Read the completed statuses" {
+  jira done-status-ids
+}
 export def done-status-ids [] {
   setup | get --optional done_status_ids | default []
 }

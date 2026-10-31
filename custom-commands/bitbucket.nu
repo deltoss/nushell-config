@@ -27,6 +27,10 @@ def bitbucket-pages [path: string, headers?: record] {
   $rows
 }
 
+# List accessible Bitbucket workspaces.
+@example "List workspace names and slugs" {
+  bitbucket get workspaces
+}
 export def "get workspaces" [] {
   bitbucket-pages "user/workspaces?pagelen=100"
     | each {|entry|
@@ -38,6 +42,10 @@ export def "get workspaces" [] {
       }
 }
 
+# Choose a Bitbucket workspace, returning its record.
+@example "Choose a workspace" {
+  bitbucket select workspace
+}
 export def "select workspace" [] {
   let workspaces = get workspaces
   if ($workspaces | length) <= 1 {
@@ -46,6 +54,10 @@ export def "select workspace" [] {
   $workspaces | tui-picker "Select Bitbucket workspace" [name slug]
 }
 
+# Find repositories in a Bitbucket workspace.
+@example "Find repositories whose names contain api" {
+  bitbucket get repositories my-team api
+}
 export def "get repositories" [
   workspace?: string # Workspace name or slug
   query?: string # Optional query to filter results by repository name
@@ -61,6 +73,10 @@ export def "get repositories" [
     | select name slug
 }
 
+# Fetch your authored Bitbucket pull requests.
+@example "Fetch PRs from a workspace" {
+  bitbucket get pull-requests --workspace my-team
+}
 export def "get pull-requests" [
   --workspace: string # Workspace slug; choose interactively when omitted
 ] {
@@ -89,6 +105,10 @@ export def "get pull-requests" [
   | sort-by updated --reverse
 }
 
+# Get repository and branch details from a Bitbucket PR URL.
+@example "Inspect a Bitbucket PR" {
+  bitbucket pr-info https://bitbucket.org/my-team/my-repo/pull-requests/123
+}
 export def pr-info [pr_url: string] {
   let parsed = $pr_url
     | parse --regex 'bitbucket\.org/(?<workspace>[^/]+)/(?<repository>[^/]+)/pull-requests/(?<id>\d+)'

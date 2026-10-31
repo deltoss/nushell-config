@@ -13,6 +13,12 @@ def selected-links [state: record] {
 }
 
 # Copy and browse focused records with key and url fields.
+@example "Add link actions to a table" {
+  [{key: docs, url: "https://www.nushell.sh"}]
+  | tui table --focus --multi
+  | tui-link-actions
+  | tui run
+}
 export def tui-link-actions [] {
   $in
   | tui bind y {|state|
@@ -42,6 +48,7 @@ def display-rows [columns: list<string>] {
 }
 
 # Pick records from a searchable table.
+#
 # Display and search only the given columns, with PascalCase labels.
 # Return the selected records with their original keys and all fields.
 # By default, returns one record or a list with --multi. Cancellation returns null or [].

@@ -1,9 +1,13 @@
 use ../tools/tui.nu [tui-picker]
 
+# Create a .NET project from an interactively selected template.
+@example "Choose a project template and location" { dotnet new }
 export def --wrapped new [...rest] {
   new menu ...$rest
 }
 
+# Choose a .NET project template and create the project.
+@example "Open the template picker" { dotnet new menu }
 export def --wrapped "new menu" [
   ...rest
 ] {
