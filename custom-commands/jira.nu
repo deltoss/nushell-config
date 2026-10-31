@@ -1,7 +1,7 @@
 use ./atlassian-helpers.nu [base-url, jira-basic-token, jira-account-id]
 use ../tools/tui.nu [tui-picker]
 
-# Load saved Jira choices, prompting for projects and active statuses when needed.
+# Load saved Jira choices, prompting for projects and completed statuses when needed.
 def load-or-configure-choices [
   site: string # Jira site URL without a trailing slash
   account_id: string # Jira account ID used to scope the saved choices
@@ -9,18 +9,16 @@ def load-or-configure-choices [
 ] {
   # Separate sites and accounts without putting URLs or account IDs in file names.
   let scope_hash = [$site $account_id] | to json --raw | hash sha256
-  # Keep the existing path so saved choices still load.
-  let choices_file = $nu.cache-dir | path join "ticket" $"active-statuses-($scope_hash).json"
+  # Previous active-status choices cannot be reused as completed-status choices.
+  let choices_file = $nu.cache-dir | path join "ticket" $"done-statuses-($scope_hash).json"
   if not $configure and ($choices_file | path exists) {
     let saved = open $choices_file
-    # Older files used status_ids. Normalize it at the storage boundary.
-    let active_status_ids = $saved | get --optional active_status_ids | default { $saved | get --optional status_ids }
-    if ($saved | get --optional project_ids | is-not-empty) and ($active_status_ids | is-not-empty) {
+    if ($saved.project_ids? | is-not-empty) and ($saved.done_status_ids? | is-not-empty) {
       return {
         site: $site
         account_id: $account_id
         project_ids: $saved.project_ids
-        active_status_ids: $active_status_ids
+        done_status_ids: $saved.done_status_ids
       }
     }
   }
@@ -35,14 +33,14 @@ def load-or-configure-choices [
   let statuses = fetch-project-statuses $site $headers $selected_projects
   if ($statuses | is-empty) { return }
 
-  let selected_statuses = $statuses | tui-picker "Choose active statuses" [name id] --multi
+  let selected_statuses = $statuses | tui-picker "Choose completed statuses" [name id] --multi
   if ($selected_statuses | is-empty) { return }
 
   let choices = {
     site: $site
     account_id: $account_id
     project_ids: ($selected_projects | get id)
-    active_status_ids: ($selected_statuses | get id)
+    done_status_ids: ($selected_statuses | get id)
   }
   mkdir ($choices_file | path dirname)
   $choices | to json | save --force $choices_file
@@ -73,12 +71,12 @@ def fetch-project-statuses [site: string headers: record projects: table] {
   | sort-by name
 }
 
-# Initialize Jira project choices and your definition of active statuses.
+# Choose Jira projects and the completed statuses to exclude from ticket lists.
 #
 # Uses the current Jira site and account. Choices survive shell restarts.
-# Returns site, account_id, project_ids, and active_status_ids, or nothing on cancellation.
+# Returns site, account_id, project_ids, and done_status_ids, or nothing on cancellation.
 export def setup [
-  --configure # Choose projects and active statuses again; cancellation keeps the saved choices
+  --configure # Choose projects and completed statuses again; cancellation keeps the saved choices
 ] {
   let site = base-url
   let account_id = jira-account-id
@@ -90,7 +88,7 @@ export def selected-project-ids [] {
   setup | get --optional project_ids | default []
 }
 
-# Get the status IDs you count as active. Prompts for setup on first use.
-export def active-status-ids [] {
-  setup | get --optional active_status_ids | default []
+# Get the status IDs excluded as completed. Prompts for setup on first use.
+export def done-status-ids [] {
+  setup | get --optional done_status_ids | default []
 }

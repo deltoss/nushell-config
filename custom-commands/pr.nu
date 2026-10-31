@@ -5,30 +5,24 @@ use ./worktree-apps.nu
 use ./bitbucket.nu [ pr-info, "get pull-requests" ]
 use ../tools/tui.nu [tui-link-actions]
 
-# List open Bitbucket PRs you authored.
+# List up to 20 recent Bitbucket PRs you authored, including closed PRs.
 export def list [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include closed PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
-  get pull-requests --workspace $workspace --all=$all
+  get pull-requests --workspace $workspace
 }
 
 # Build the PR search, table and shortcuts without running the TUI.
-# Display prefixes the title with 👤 when you're the author, or 👾 otherwise.
 @example "Compose an interactive PR widget" {
   pr widget | tui run
 }
 export def widget [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include closed PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
-  let prs = list --workspace $workspace --all=$all
   let columns = [State Display]
   # Keep raw fields for copy/browse alongside display labels.
-  $prs | each {|row|
-    let author_icon = if $row.role == Author { '👤' } else { '👾' }
-    $row | merge ($row | rename --block { str pascal-case })
-      | insert Display $"($author_icon) ($row.title)"
+  list --workspace $workspace | each {|pr|
+    { ...$pr, State: $pr.state, Display: $"👤 ($pr.title)" }
   }
   | tui search --id pr-query --bind / --fuzzy --columns $columns
   | tui table --id pr-rows --focus --multi --columns $columns
@@ -37,10 +31,9 @@ export def widget [
 
 # Browse and copy PRs without closing the interface after each action.
 export def tui [
-  --workspace: string # Limit to one workspace; defaults to all your workspaces
-  --all # Include closed PRs
+  --workspace: string # Workspace slug; choose interactively when omitted
 ] {
-  widget --workspace $workspace --all=$all
+  widget --workspace $workspace
   | tui label --status "Space: select  y: copy IDs  Y: copy URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore
