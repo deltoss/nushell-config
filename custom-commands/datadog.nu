@@ -8,7 +8,6 @@ def --wrapped pup-json [...args: string] {
   $result.stdout | from json
 }
 
-# List up to 20 monitors needing attention, without fetching more pages.
 # Authenticate with `pup auth login` first. Pup manages the site and credentials.
 # DATADOG_MONITOR_QUERY sets the default search; --query overrides it.
 @example "Find production alerts" {
@@ -49,7 +48,6 @@ def display-rows [query?: string] {
   }
 }
 
-# Build the Datadog search, table and shortcuts without running the TUI.
 @example "Compose an interactive Datadog widget" {
   datadog widget | tui run
 }
@@ -68,7 +66,6 @@ export def widget [
   | tui-link-actions
 }
 
-# Browse monitors. Ctrl+R refreshes after checked rows have been unmarked.
 @example "Browse monitors needing attention" {
   datadog tui
 }

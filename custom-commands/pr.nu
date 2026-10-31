@@ -5,14 +5,12 @@ use ./worktree-apps.nu
 use ./bitbucket.nu [ pr-info, "get pull-requests" ]
 use ../tools/tui.nu [tui-link-actions]
 
-# List up to 20 recent Bitbucket PRs you authored, including closed PRs.
 export def list [
   --workspace: string # Workspace slug; choose interactively when omitted
 ] {
   get pull-requests --workspace $workspace
 }
 
-# Build the PR search, table and shortcuts without running the TUI.
 @example "Compose an interactive PR widget" {
   pr widget | tui run
 }
@@ -29,7 +27,6 @@ export def widget [
   | tui-link-actions
 }
 
-# Browse and copy PRs without closing the interface after each action.
 export def tui [
   --workspace: string # Workspace slug; choose interactively when omitted
 ] {
@@ -71,7 +68,6 @@ export def url [
   }
 }
 
-# Clone the repo as a bare clone if it isn't there yet.
 # One bare clone is shared by every PR worktree of that repo.
 def ensure-bare-clone [bare_dir: string, clone_url: string] {
   if ($bare_dir | path exists) {
@@ -86,7 +82,6 @@ def ensure-bare-clone [bare_dir: string, clone_url: string] {
   ^git -C $bare_dir config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 }
 
-# Turn a PR title into a filesystem-friendly folder name fragment
 def slugify [text: string] {
   $text
     | str lowercase
@@ -95,8 +90,7 @@ def slugify [text: string] {
     | str trim --char '-'
 }
 
-# Find the PR's existing worktree folder (so a retitled PR reuses it),
-# or derive a fresh `<id>-<title-slug>` name from the current title
+# Reuse the checkout even if the PR title changes.
 def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
   let existing = if ($repo_dir | path exists) {
     ls --short-names $repo_dir
@@ -110,7 +104,6 @@ def pr-target-dir [repo_dir: string, pr_id: string, title: string] {
   $existing | get --optional 0 | default ($repo_dir | path join $"($pr_id)-(slugify $title)")
 }
 
-# Add a worktree for the branch if it isn't there yet
 def ensure-worktree [bare_dir: string, target_dir: string, branch: string] {
   if ($target_dir | path exists) {
     return
@@ -155,12 +148,7 @@ export def self-review [dest_branch: string] {
   }
 }
 
-# Check out a pull request into a dedicated worktree under ~/PRs.
-# Clones the repo once per repository (bare clone at ~/PRs/<repo>/.bare), then
-# adds a worktree per PR (~/PRs/<repo>/<pr-id>-<title-slug>), so reviewing more
-# PRs of the same repo never re-clones. Re-running for the same PR syncs the
-# worktree to the latest commits instead.
-# To clean up a finished review: git -C ~/PRs/<repo>/.bare worktree remove <folder-name> --force
+# Reuses an existing checkout when reviewing the same PR again.
 export def --env review [
   pr_url: string # Pull request URL, e.g. https://bitbucket.org/<workspace>/<repo>/pull-requests/<id>
   --mode: list<string>@available-review-modes # Diff tools to open after checkout. Prompts when omitted

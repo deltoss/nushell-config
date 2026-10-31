@@ -1,7 +1,6 @@
 use ./atlassian-helpers.nu [base-url, jira-basic-token, jira-account-id]
 use ../tools/tui.nu [tui-picker]
 
-# Load saved Jira choices, prompting for projects and completed statuses when needed.
 def load-or-configure-choices [
   site: string # Jira site URL without a trailing slash
   account_id: string # Jira account ID used to scope the saved choices
@@ -47,7 +46,6 @@ def load-or-configure-choices [
   $choices
 }
 
-# Fetch every browsable project using Jira's offset-based pagination.
 def fetch-projects [site: string headers: record] {
   mut projects = []
   mut start_at = 0
@@ -72,9 +70,7 @@ def fetch-project-statuses [site: string headers: record projects: table] {
 }
 
 # Choose Jira projects and the completed statuses to exclude from ticket lists.
-#
-# Uses the current Jira site and account. Choices survive shell restarts.
-# Returns site, account_id, project_ids, and done_status_ids, or nothing on cancellation.
+# Choices persist per site and account; cancellation returns nothing.
 export def setup [
   --configure # Choose projects and completed statuses again; cancellation keeps the saved choices
 ] {
@@ -83,12 +79,12 @@ export def setup [
   load-or-configure-choices $site $account_id --configure=$configure
 }
 
-# Get the chosen project IDs. Prompts for setup on first use.
+# Prompts for setup on first use.
 export def selected-project-ids [] {
   setup | get --optional project_ids | default []
 }
 
-# Get the status IDs excluded as completed. Prompts for setup on first use.
+# Prompts for setup on first use.
 export def done-status-ids [] {
   setup | get --optional done_status_ids | default []
 }

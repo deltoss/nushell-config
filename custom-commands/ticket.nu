@@ -31,7 +31,6 @@ def open-ticket [] {
   }
 }
 
-# Fetch up to 20 issues for a JQL query.
 def search-tickets [jql: string] {
   let site = base-url
   let headers = {
@@ -54,7 +53,6 @@ def priority-ranks [keys: list<string>] {
     | enumerate | reduce --fold {} {|issue, order| $order | upsert $issue.item.key $issue.index }
 }
 
-# List up to 20 recent active Jira tickets assigned to you now or previously, or reported by you.
 # Run `jira setup --configure` to change projects and completed statuses.
 export def list [] {
   let choices = setup
@@ -78,8 +76,6 @@ export def list [] {
 }
 
 # Pick Jira tickets, returning the selected record or records.
-#
-# Type to search, press Enter to confirm, or Esc to cancel.
 # Add --browse to open the selection without changing the return value.
 export def pick [
   --multi(-m) # Select multiple tickets; Space toggles a ticket, Enter confirms
@@ -100,8 +96,6 @@ export def pick [
   $selected
 }
 
-# Build the ticket search, table and shortcuts without running the TUI.
-# s cycles Default, Status (A–Z), Priority (highest first); unmark rows before sorting.
 @example "Compose an interactive ticket widget" {
   ticket widget | tui run
 }
@@ -141,7 +135,6 @@ export def widget [] {
   | tui-link-actions
 }
 
-# Browse and copy tickets without closing the interface after each action.
 export def tui [] {
   widget
   | tui label --status "s: sort (unmark first)  Space: mark  y: copy keys  Y: URLs  b: browse  /: search  q: quit"

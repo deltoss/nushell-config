@@ -13,7 +13,6 @@ def selected-links [state: record] {
 }
 
 # Copy and browse focused records with key and url fields.
-# Shared handlers let independently built tabs use the same shortcuts.
 export def tui-link-actions [] {
   $in
   | tui bind y {|state|

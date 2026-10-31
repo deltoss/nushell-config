@@ -61,7 +61,6 @@ export def "get repositories" [
     | select name slug
 }
 
-# List up to 20 recent PRs you authored, including closed PRs.
 export def "get pull-requests" [
   --workspace: string # Workspace slug; choose interactively when omitted
 ] {
@@ -90,7 +89,6 @@ export def "get pull-requests" [
   | sort-by updated --reverse
 }
 
-# Everything `pr review` needs to know about a Bitbucket pull request URL
 export def pr-info [pr_url: string] {
   let parsed = $pr_url
     | parse --regex 'bitbucket\.org/(?<workspace>[^/]+)/(?<repository>[^/]+)/pull-requests/(?<id>\d+)'

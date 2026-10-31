@@ -4,10 +4,7 @@ def layout-path [path: string] {
   $path | str replace --all '\' '/' | to json --raw
 }
 
-# Browse tickets, authored PRs and Datadog monitors in Zellij panes.
-# DATADOG_MONITOR_QUERY customizes the monitor search; Pup manages authentication.
 # Opens a new tab inside Zellij, or starts a session outside it.
-# Alt+Arrow moves between panes with the current Zellij configuration.
 @example "Choose a workspace and open the dashboard" {
   dashboard
 }
