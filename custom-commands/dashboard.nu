@@ -32,7 +32,7 @@ export def main [
   let datadog_module = $commands_dir | path join datadog.nu | str replace --all '\' '/'
   let ticket_command = $"use ($ticket_module | to nuon); ticket tui"
   let pr_command = $"use ($pr_module | to nuon); pr tui --workspace ($workspace | to nuon)"
-  let datadog_command = $"use ($datadog_module | to nuon); datadog tui"
+  let datadog_command = $"use ($datadog_module | to nuon); datadog monitor tui"
   # Panes inherit Zellij's PATH, which may lack mise-managed tools.
   # Non-interactive Nu does not run mise's prompt hook, so use `mise exec`.
   let executable = $mise.path | to json --raw

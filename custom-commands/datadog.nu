@@ -60,9 +60,9 @@ def load-monitor-rows [monitor_query?: string] {
 
 # Build a Datadog monitor widget for composition.
 @example "Compose an interactive Datadog widget" {
-  datadog widget | tui run
+  datadog monitor widget | tui run
 }
-export def widget [
+export def "monitor widget" [
   --query: string # Datadog monitor search; defaults to DATADOG_MONITOR_QUERY
 ] {
   let display_columns = [Status Name]
@@ -79,12 +79,12 @@ export def widget [
 
 # Browse Datadog monitors interactively.
 @example "Browse monitors needing attention" {
-  datadog tui
+  datadog monitor tui
 }
-export def tui [
+export def "monitor tui" [
   --query: string # Datadog monitor search; defaults to DATADOG_MONITOR_QUERY
 ] {
-  widget --query $query
+  monitor widget --query $query
   | tui label --status "Ctrl+R: refresh (unmark first)  Space: mark  y: IDs  Y: URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore
