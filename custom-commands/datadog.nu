@@ -1,15 +1,5 @@
 use ../tools/tui.nu [tui-link-actions tui-picker]
-use ../tools/datadog.nu [run-pup-json run-log-browser validate-log-options]
-
-def browser-base-url [site: string] {
-  # Bare sites use app.; regional sites already identify the browser host.
-  let browser_host = if $site in [datadoghq.com datadoghq.eu ddog-gov.com datad0g.com] {
-    $"app.($site)"
-  } else {
-    $site
-  }
-  $"https://($browser_host)"
-}
+use ../tools/datadog.nu [browser-base-url run-pup-json run-log-browser validate-log-options]
 
 # Find Datadog monitors matching a search.
 #
@@ -115,6 +105,7 @@ export def "select environment" [service: string] {
 # Service detection currently reads DD_SERVICE. Omit --env to choose an environment.
 # Refresh and query changes restart at the first page.
 # Search uses Datadog syntax within the selected service and environment; an empty query clears it.
+# Browsing opens the current search and time window in Datadog.
 @example "Choose an environment and browse service logs" {
   datadog logs tui
 }

@@ -1,3 +1,13 @@
+export def browser-base-url [site: string] {
+  # Bare sites use app.; regional sites already identify the browser host.
+  let browser_host = if $site in [datadoghq.com datadoghq.eu ddog-gov.com datad0g.com] {
+    $"app.($site)"
+  } else {
+    $site
+  }
+  $"https://($browser_host)"
+}
+
 export def --wrapped run-pup-json [...arguments: string] {
   if (which pup | is-empty) {
     error make {msg: "Pup is required. Install it with: mise use -g github:DataDog/pup"}
@@ -7,6 +17,17 @@ export def --wrapped run-pup-json [...arguments: string] {
     error make {msg: $"Pup failed: ($command_result.stderr | str trim)"}
   }
   $command_result.stdout | from json
+}
+
+def log-search-url [query: record] {
+  let site = run-pup-json auth status | get site
+  let parameters = {
+    query: $query.filter
+    from_ts: ($query.start | into datetime | into int | $in // 1_000_000)
+    to_ts: ($query.end | into datetime | into int | $in // 1_000_000)
+    live: false
+  } | url build-query
+  $"(browser-base-url $site)/logs?($parameters)"
 }
 
 def load-log-page [query: record, cursor?: string] {
@@ -118,7 +139,7 @@ def log-browser-widget [browser: record] {
       | insert details $log
   }
   let title = $"($browser.service) / ($browser.environment) | Time range: ($browser.from) | Limit: ($browser.limit) | Page ($browser.page_index + 1)"
-  let hint = " / : Move  s: Search  /: Filter  [/,: Previous  ]/.: Next  t: Time range  l: Limit  Ctrl+R: Refresh  q: Quit"
+  let hint = " / : Move  s: Search  b: Browse  /: Filter  [/,: Previous  ]/.: Next  t: Time range  l: Limit  Ctrl+R: Refresh  q: Quit"
   let ui = ($rows
     | tui label --titlebar $title
     | tui label $"Search: ($browser.search_query | default --empty '*')"
@@ -129,6 +150,13 @@ def log-browser-widget [browser: record] {
         (tui preview --from logs --title Details {|row| $row.details | to json | nu-highlight })
       ]
     | tui label --status $hint
+    | tui bind b {||
+        try {
+          start (log-search-url $browser.query) | ignore
+        } catch {|error|
+          {action: submit, selected: {error: $error.msg}}
+        }
+      }
     | tui bind enter {|| null })
   [
     [key action];
@@ -136,7 +164,7 @@ def log-browser-widget [browser: record] {
     [']' next] ['.' next]
     [s search] [t from] [l limit] [ctrl+r refresh]
   ] | reduce --fold $ui {|binding, ui|
-    $ui | tui bind $binding.key {|| {action: submit, selected: $binding.action} }
+    $ui | tui bind $binding.key {|| {action: submit, selected: {action: $binding.action}} }
   }
 }
 
@@ -145,9 +173,13 @@ export def run-log-browser [service: string, environment: string, from: duration
   loop {
     let result = log-browser-widget $browser | tui run
     if $result.action != "submit" { return }
+    if $result.selected.error? != null {
+      $browser = $browser | update message $result.selected.error
+      continue
+    }
     let current_browser = $browser
     $browser = try {
-      update-log-browser $current_browser $result.selected
+      update-log-browser $current_browser $result.selected.action
     } catch {|error|
       $current_browser | update message $error.msg
     }
