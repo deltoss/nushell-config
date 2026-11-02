@@ -1,5 +1,5 @@
 use ../tools/tui.nu [tui-link-actions tui-picker]
-use ../tools/datadog.nu [run-pup-json run-log-browser]
+use ../tools/datadog.nu [run-pup-json run-log-browser validate-log-options]
 
 def browser-base-url [site: string] {
   # Bare sites use app.; regional sites already identify the browser host.
@@ -75,7 +75,7 @@ export def "monitor tui" [
   --query: string # Datadog monitor search; defaults to DATADOG_MONITOR_QUERY
 ] {
   monitor widget --query $query
-  | tui label --status "Ctrl+R: refresh (unmark first)  Space: mark  y: IDs  Y: URLs  b: browse  /: search  q: quit"
+  | tui label --status "Ctrl+R: Refresh (unmark first)  Space: Check  y: Copy IDs  Y: Copy URLs  b: Browse  /: Filter  q: Quit"
   | tui run
   | ignore
 }
@@ -91,7 +91,7 @@ def project-service-name [] {
 
 # Select an environment with recent logs for a Datadog service.
 #
-# Only environments with recent logs are offered. Cancellation returns null.
+# Cancellation returns null.
 @example "Choose an environment for a service" {
   datadog select environment orders-api
 }
@@ -100,19 +100,20 @@ export def "select environment" [service: string] {
     --query $"service:($service | to json --raw)" --from 7d
     --compute count --group-by env --limit '1000'
     | get data.buckets
-    | each {|bucket| $bucket.by.env? }
+    | get --optional by.env
     | compact --empty | uniq | sort
-    | each {|environment| {name: $environment} })
+    | each {|environment| {environment: $environment} })
   if ($environments | is-empty) {
     error make {msg: $"No environments found in recent logs for ($service). Use datadog logs tui --env <name> to specify one"}
   }
-  $environments | tui-picker $"Environment for ($service)" [name] | get --optional name
+  let selected = $environments | tui-picker $"Select environment for ($service)" [environment]
+  $selected.environment?
 }
 
 # Browse a service's Datadog logs with paging and editable query settings.
 #
 # Service detection currently reads DD_SERVICE. Omit --env to choose an environment.
-# --from is a Nushell duration. Refresh and query changes restart at the first page.
+# Refresh and query changes restart at the first page.
 @example "Choose an environment and browse service logs" {
   datadog logs tui
 }
@@ -126,6 +127,7 @@ export def --wrapped "logs tui" [
   ...arguments: string # Optional --env <name> or --env=<name>; otherwise choose from Datadog
 ] {
   if $help { help "datadog logs tui" | print; return }
+  validate-log-options $from $limit
   let service = project-service-name
   # Nushell reserves $env, so --env cannot be declared as a named parameter.
   let environment = match $arguments {

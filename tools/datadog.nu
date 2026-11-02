@@ -15,21 +15,18 @@ def load-log-page [query: record, cursor?: string] {
     --query $query.filter --from $query.start --to $query.end
     --limit ($query.limit | into string) --sort desc ...$pagination)
   {
-    rows: ($response.data | each {|entry|
-      {
-        Time: $entry.attributes.timestamp
-        Level: ($entry.attributes.status? | default "")
-        Message: ($entry.attributes.message? | default "")
-        details: $entry.attributes
-      }
-    })
+    rows: ($response.data | each {|entry| $entry.attributes })
     next_cursor: ($response.meta?.page?.after? | default "")
   }
 }
 
-def new-log-browser [service: string, environment: string, from: duration, limit: int] {
+export def validate-log-options [from: duration, limit: int] {
   if $from <= 0sec { error make {msg: "From must be a positive duration, such as 30min or 1hr"} }
   if $limit < 1 or $limit > 1000 { error make {msg: "Limit must be between 1 and 1000"} }
+}
+
+def new-log-browser [service: string, environment: string, from: duration, limit: int] {
+  validate-log-options $from $limit
   # Freeze both bounds so relative times cannot shift between cursor requests.
   let end = date now
   let query = {
@@ -52,7 +49,7 @@ def new-log-browser [service: string, environment: string, from: duration, limit
 
 def edit-log-option [title: string, value: string] {
   let result = (tui textbox --id option --title $title --value $value --focus
-    | tui label --status "Enter: apply  Ctrl+C: cancel"
+    | tui label --status "Enter: Apply  Ctrl+C: Cancel"
     | tui run --dialog --size [60 7])
   if $result.action == "submit" { $result.values.option | str trim }
 }
@@ -60,7 +57,8 @@ def edit-log-option [title: string, value: string] {
 def update-log-browser [browser: record, action: string] {
   match $action {
     previous => {
-      $browser | merge {page_index: ([($browser.page_index - 1) 0] | math max), message: ""}
+      if $browser.page_index == 0 { return $browser }
+      $browser | merge {page_index: ($browser.page_index - 1), message: ""}
     }
     next => {
       let page_index = $browser.page_index + 1
@@ -68,25 +66,30 @@ def update-log-browser [browser: record, action: string] {
         return ($browser | merge {page_index: $page_index, message: ""})
       }
       let cursor = $browser.pages | last | get next_cursor
-      if ($cursor | is-empty) { return ($browser | merge {message: "Last page"}) }
+      if ($cursor | is-empty) { return ($browser | update message "Last page") }
       let page = load-log-page $browser.query $cursor
       if ($page.rows | is-empty) {
         let last_page = $browser.pages | last | update next_cursor ""
-        return ($browser | update pages ($browser.pages | drop 1 | append $last_page)
-          | merge {message: "Last page"})
+        return ($browser | merge {
+          pages: ($browser.pages | drop 1 | append $last_page)
+          message: "Last page"
+        })
       }
       $browser | merge {pages: ($browser.pages | append $page), page_index: $page_index, message: ""}
     }
-    from | limit | refresh => {
-      let value = match $action {
-        from => { edit-log-option "Lookback (e.g. 30min, 1hr, 7day)" ($browser.from | into string) }
-        limit => { edit-log-option "Logs per page (1-1000)" ($browser.limit | into string) }
-        _ => { "" }
-      }
-      if $value == null { return $browser }
-      let from = if $action == "from" { $value | into duration } else { $browser.from }
-      let limit = if $action == "limit" { $value | into int } else { $browser.limit }
-      new-log-browser $browser.service $browser.environment $from $limit
+    from => {
+      let from = edit-log-option "Time range (e.g. 30min, 1hr, 7day)" ($browser.from | into string)
+      if $from == null { return $browser }
+      new-log-browser $browser.service $browser.environment ($from | into duration) $browser.limit
+    }
+    limit => {
+      let limit = edit-log-option "Logs per page (1-1000)" ($browser.limit | into string)
+      if $limit == null { return $browser }
+      if $limit !~ '^\d+$' { error make {msg: "Limit must be a whole number between 1 and 1000"} }
+      new-log-browser $browser.service $browser.environment $browser.from ($limit | into int)
+    }
+    refresh => {
+      new-log-browser $browser.service $browser.environment $browser.from $browser.limit
     }
     _ => { $browser }
   }
@@ -94,17 +97,24 @@ def update-log-browser [browser: record, action: string] {
 
 def log-browser-widget [browser: record] {
   let page = $browser.pages | get $browser.page_index
-  let columns = [Time Level Message]
-  let title = $"($browser.service) / ($browser.environment) | From: ($browser.from) | Limit: ($browser.limit) | Page ($browser.page_index + 1)"
-  let ui = ($page.rows
+  let columns = [timestamp status message]
+  let labels = $columns | str pascal-case
+  let rows = $page.rows | each {|log|
+    $log | select --optional ...$columns
+      | rename --block { str pascal-case }
+      | insert details $log
+  }
+  let title = $"($browser.service) / ($browser.environment) | Time range: ($browser.from) | Limit: ($browser.limit) | Page ($browser.page_index + 1)"
+  let hint = " / : Move  /: Filter  [/,: Previous  ]/.: Next  t: Time range  l: Limit  Ctrl+R: Refresh  q: Quit"
+  let ui = ($rows
     | tui label --titlebar $title
     | tui label $browser.message
-    | tui search --id log-search --bind / --fuzzy --columns $columns --placeholder "/ to filter this page"
+    | tui search --id log-search --bind / --fuzzy --columns $labels --placeholder "/ to filter this page"
     | tui split --vertical --sizes [60% 1fr] [
-        (tui table --id logs --focus --columns $columns)
+        (tui table --id logs --focus --columns $labels)
         (tui preview --from logs --title Details {|row| $row.details | to json | nu-highlight })
       ]
-    | tui label --status "[/,: previous  ]/.: next  t: time range  l: limit  Ctrl+R: refresh  /: filter  q: quit"
+    | tui label --status $hint
     | tui bind enter {|| null })
   [
     [key action];
@@ -125,7 +135,7 @@ export def run-log-browser [service: string, environment: string, from: duration
     $browser = try {
       update-log-browser $current_browser $result.selected
     } catch {|error|
-      $current_browser | merge {message: $error.msg}
+      $current_browser | update message $error.msg
     }
   }
 }
