@@ -114,16 +114,21 @@ export def "select environment" [service: string] {
 #
 # Service detection currently reads DD_SERVICE. Omit --env to choose an environment.
 # Refresh and query changes restart at the first page.
+# Search uses Datadog syntax within the selected service and environment; an empty query clears it.
 @example "Choose an environment and browse service logs" {
   datadog logs tui
 }
 @example "Browse recent production logs" {
   datadog logs tui --env prod --from 30min --limit 50
 }
+@example "Find errors mentioning a timeout" {
+  datadog logs tui --env prod --query 'status:error *:timeout'
+}
 export def --wrapped "logs tui" [
   --help(-h) # Show command help
   --from: duration = 1hr # How far back to search
   --limit: int = 50 # Logs per page, from 1 to 1000
+  --query: string = "" # Datadog log search expression
   ...arguments: string # Optional --env <name> or --env=<name>; otherwise choose from Datadog
 ] {
   if $help { help "datadog logs tui" | print; return }
@@ -140,5 +145,5 @@ export def --wrapped "logs tui" [
   if ($environment | str trim | is-empty) or ($environment | str starts-with '--') {
     error make {msg: "Expected a non-empty environment name after --env"}
   }
-  run-log-browser $service $environment $from $limit
+  run-log-browser $service $environment $from $limit $query
 }

@@ -25,12 +25,19 @@ export def validate-log-options [from: duration, limit: int] {
   if $limit < 1 or $limit > 1000 { error make {msg: "Limit must be between 1 and 1000"} }
 }
 
-def new-log-browser [service: string, environment: string, from: duration, limit: int] {
+def new-log-browser [service: string, environment: string, from: duration, limit: int, search_query: string] {
   validate-log-options $from $limit
+  let search_query = $search_query | str trim
+  let service_filter = $"service:($service | to json --raw) env:($environment | to json --raw)"
+  let filter = if ($search_query | is-empty) {
+    $service_filter
+  } else {
+    $service_filter + " AND (" + $search_query + ")"
+  }
   # Freeze both bounds so relative times cannot shift between cursor requests.
   let end = date now
   let query = {
-    filter: $"service:($service | to json --raw) env:($environment | to json --raw)"
+    filter: $filter
     start: ($end - $from | format date "%+")
     end: ($end | format date "%+")
     limit: $limit
@@ -40,6 +47,7 @@ def new-log-browser [service: string, environment: string, from: duration, limit
     environment: $environment
     from: $from
     limit: $limit
+    search_query: $search_query
     query: $query
     pages: [(load-log-page $query)]
     page_index: 0
@@ -80,16 +88,21 @@ def update-log-browser [browser: record, action: string] {
     from => {
       let from = edit-log-option "Time range (e.g. 30min, 1hr, 7day)" ($browser.from | into string)
       if $from == null { return $browser }
-      new-log-browser $browser.service $browser.environment ($from | into duration) $browser.limit
+      new-log-browser $browser.service $browser.environment ($from | into duration) $browser.limit $browser.search_query
     }
     limit => {
       let limit = edit-log-option "Logs per page (1-1000)" ($browser.limit | into string)
       if $limit == null { return $browser }
       if $limit !~ '^\d+$' { error make {msg: "Limit must be a whole number between 1 and 1000"} }
-      new-log-browser $browser.service $browser.environment $browser.from ($limit | into int)
+      new-log-browser $browser.service $browser.environment $browser.from ($limit | into int) $browser.search_query
+    }
+    search => {
+      let search_query = edit-log-option "Search logs (Datadog syntax; empty clears)" $browser.search_query
+      if $search_query == null { return $browser }
+      new-log-browser $browser.service $browser.environment $browser.from $browser.limit $search_query
     }
     refresh => {
-      new-log-browser $browser.service $browser.environment $browser.from $browser.limit
+      new-log-browser $browser.service $browser.environment $browser.from $browser.limit $browser.search_query
     }
     _ => { $browser }
   }
@@ -105,9 +118,10 @@ def log-browser-widget [browser: record] {
       | insert details $log
   }
   let title = $"($browser.service) / ($browser.environment) | Time range: ($browser.from) | Limit: ($browser.limit) | Page ($browser.page_index + 1)"
-  let hint = " / : Move  /: Filter  [/,: Previous  ]/.: Next  t: Time range  l: Limit  Ctrl+R: Refresh  q: Quit"
+  let hint = " / : Move  s: Search  /: Filter  [/,: Previous  ]/.: Next  t: Time range  l: Limit  Ctrl+R: Refresh  q: Quit"
   let ui = ($rows
     | tui label --titlebar $title
+    | tui label $"Search: ($browser.search_query | default --empty '*')"
     | tui label $browser.message
     | tui search --id log-search --bind / --fuzzy --columns $labels --placeholder "/ to filter this page"
     | tui split --vertical --sizes [60% 1fr] [
@@ -120,14 +134,14 @@ def log-browser-widget [browser: record] {
     [key action];
     ['[' previous] [',' previous]
     [']' next] ['.' next]
-    [t from] [l limit] [ctrl+r refresh]
+    [s search] [t from] [l limit] [ctrl+r refresh]
   ] | reduce --fold $ui {|binding, ui|
     $ui | tui bind $binding.key {|| {action: submit, selected: $binding.action} }
   }
 }
 
-export def run-log-browser [service: string, environment: string, from: duration, limit: int] {
-  mut browser = new-log-browser $service $environment $from $limit
+export def run-log-browser [service: string, environment: string, from: duration, limit: int, search_query: string] {
+  mut browser = new-log-browser $service $environment $from $limit $search_query
   loop {
     let result = log-browser-widget $browser | tui run
     if $result.action != "submit" { return }
