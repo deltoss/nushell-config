@@ -1,12 +1,5 @@
-use ../tools/tui.nu [tui-link-actions]
-
-def --wrapped run-pup-json [...arguments: string] {
-  let command_result = ^pup --read-only --no-envelope --output json ...$arguments | complete
-  if $command_result.exit_code != 0 {
-    error make {msg: $"Pup failed: ($command_result.stderr | str trim)"}
-  }
-  $command_result.stdout | from json
-}
+use ../tools/tui.nu [tui-link-actions tui-picker]
+use ../tools/datadog.nu [run-pup-json run-log-browser]
 
 def browser-base-url [site: string] {
   # Bare sites use app.; regional sites already identify the browser host.
@@ -28,9 +21,6 @@ def browser-base-url [site: string] {
 export def list [
   --query: string # Datadog monitor search; defaults to Alert, Warn and No Data
 ] {
-  if (which pup | is-empty) {
-    error make {msg: "Pup is required. Install it with: mise use -g github:DataDog/pup"}
-  }
   let authentication_status = run-pup-json auth status
   if not $authentication_status.authenticated {
     error make {msg: "Sign in to Datadog first with: pup auth login"}
@@ -88,4 +78,65 @@ export def "monitor tui" [
   | tui label --status "Ctrl+R: refresh (unmark first)  Space: mark  y: IDs  Y: URLs  b: browse  /: search  q: quit"
   | tui run
   | ignore
+}
+
+def project-service-name [] {
+  # Repository detection is stubbed; DD_SERVICE supplies the name for now.
+  let service = $env.DD_SERVICE? | default "" | str trim
+  if ($service | is-empty) {
+    error make {msg: "Service detection is not implemented yet. Set $env.DD_SERVICE to your Datadog service name"}
+  }
+  $service
+}
+
+# Select an environment with recent logs for a Datadog service.
+#
+# Only environments with recent logs are offered. Cancellation returns null.
+@example "Choose an environment for a service" {
+  datadog select environment orders-api
+}
+export def "select environment" [service: string] {
+  let environments = (run-pup-json logs aggregate
+    --query $"service:($service | to json --raw)" --from 7d
+    --compute count --group-by env --limit '1000'
+    | get data.buckets
+    | each {|bucket| $bucket.by.env? }
+    | compact --empty | uniq | sort
+    | each {|environment| {name: $environment} })
+  if ($environments | is-empty) {
+    error make {msg: $"No environments found in recent logs for ($service). Use datadog logs tui --env <name> to specify one"}
+  }
+  $environments | tui-picker $"Environment for ($service)" [name] | get --optional name
+}
+
+# Browse a service's Datadog logs with paging and editable query settings.
+#
+# Service detection currently reads DD_SERVICE. Omit --env to choose an environment.
+# --from is a Nushell duration. Refresh and query changes restart at the first page.
+@example "Choose an environment and browse service logs" {
+  datadog logs tui
+}
+@example "Browse recent production logs" {
+  datadog logs tui --env prod --from 30min --limit 50
+}
+export def --wrapped "logs tui" [
+  --help(-h) # Show command help
+  --from: duration = 1hr # How far back to search
+  --limit: int = 50 # Logs per page, from 1 to 1000
+  ...arguments: string # Optional --env <name> or --env=<name>; otherwise choose from Datadog
+] {
+  if $help { help "datadog logs tui" | print; return }
+  let service = project-service-name
+  # Nushell reserves $env, so --env cannot be declared as a named parameter.
+  let environment = match $arguments {
+    [] => { select environment $service }
+    [--env $name] => { $name }
+    [$argument] if ($argument | str starts-with '--env=') => { $argument | str substring 6.. }
+    _ => { error make {msg: "Expected --env <name> or --env=<name>"} }
+  }
+  if $environment == null { return }
+  if ($environment | str trim | is-empty) or ($environment | str starts-with '--') {
+    error make {msg: "Expected a non-empty environment name after --env"}
+  }
+  run-log-browser $service $environment $from $limit
 }
