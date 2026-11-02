@@ -19,6 +19,10 @@ export def main [
   if (which zellij | is-empty) {
     error make {msg: "zellij is required to open the dashboard"}
   }
+  let mise = (which ^mise).0?
+  if $mise == null {
+    error make {msg: "mise is required to open the dashboard"}
+  }
   let workspace = $workspace | default --empty { bitbucket select workspace | get --optional slug }
   if ($workspace | is-empty) { return }
 
@@ -29,7 +33,10 @@ export def main [
   let ticket_command = $"use ($ticket_module | to nuon); ticket tui"
   let pr_command = $"use ($pr_module | to nuon); pr tui --workspace ($workspace | to nuon)"
   let datadog_command = $"use ($datadog_module | to nuon); datadog tui"
-  let executable = layout-path $nu.current-exe
+  # Panes inherit Zellij's PATH, which may lack mise-managed tools.
+  # Non-interactive Nu does not run mise's prompt hook, so use `mise exec`.
+  let executable = $mise.path | to json --raw
+  let nu_executable = layout-path $nu.current-exe
   let cwd = layout-path $env.PWD
   # nu -c skips user startup files unless they are explicitly supplied.
   let env_config = layout-path $nu.env-path
@@ -41,14 +48,14 @@ export def main [
     }
     pane split_direction="vertical" {
       pane name="Tickets" command=($executable) close_on_exit=false {
-        args "--env-config" ($env_config) "--config" ($config) "-c" ($ticket_command | to json --raw)
+        args "exec" "--" ($nu_executable) "--env-config" ($env_config) "--config" ($config) "-c" ($ticket_command | to json --raw)
       }
       pane split_direction="horizontal" {
         pane name="Pull requests" command=($executable) close_on_exit=false {
-          args "--env-config" ($env_config) "--config" ($config) "-c" ($pr_command | to json --raw)
+          args "exec" "--" ($nu_executable) "--env-config" ($env_config) "--config" ($config) "-c" ($pr_command | to json --raw)
         }
         pane name="Datadog" command=($executable) close_on_exit=false {
-          args "--env-config" ($env_config) "--config" ($config) "-c" ($datadog_command | to json --raw)
+          args "exec" "--" ($nu_executable) "--env-config" ($env_config) "--config" ($config) "-c" ($datadog_command | to json --raw)
         }
       }
     }
