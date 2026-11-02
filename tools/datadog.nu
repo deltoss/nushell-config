@@ -104,13 +104,13 @@ def log-browser-widget [browser: record] {
         (tui table --id logs --focus --columns $columns)
         (tui preview --from logs --title Details {|row| $row.details | to json | nu-highlight })
       ]
-    | tui label --status "[/,: previous  ]/.: next  f: from  l: limit  Ctrl+R: refresh  /: filter  q: quit"
+    | tui label --status "[/,: previous  ]/.: next  t: time range  l: limit  Ctrl+R: refresh  /: filter  q: quit"
     | tui bind enter {|| null })
   [
     [key action];
     ['[' previous] [',' previous]
     [']' next] ['.' next]
-    [f from] [l limit] [ctrl+r refresh]
+    [t from] [l limit] [ctrl+r refresh]
   ] | reduce --fold $ui {|binding, ui|
     $ui | tui bind $binding.key {|| {action: submit, selected: $binding.action} }
   }
