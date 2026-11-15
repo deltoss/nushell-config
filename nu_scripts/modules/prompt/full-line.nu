@@ -20,8 +20,11 @@
 #
 # credit panache-git for the git status widget.
 
-use std dirs
-use std assert
+use std/dirs
+use std/assert
+
+# set up `$env.DIRS_LIST` for whoever imports this module, since `dirs` reads it
+export-env { use std/dirs [] }
 
 # build the prompt from segments, looks like:
 #
@@ -203,7 +206,7 @@ def repo-structured [] {
     $status
     | where ($it | str starts-with '1') or ($it | str starts-with '2')
     | split column ' '
-    | get column2
+    | get column1
     | split column '' staging worktree --collapse-empty
   } else {
     [[]]
