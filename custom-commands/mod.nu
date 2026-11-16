@@ -4,7 +4,7 @@ export module ./worktree.nu
 export module ./jira.nu
 export module ./ticket.nu
 export module ./pr.nu
-export module ./datadog.nu
+export module ./datadog
 export module ./dashboard.nu
 export module ./bitbucket.nu
 export module ./kill.nu

@@ -20,11 +20,23 @@ export def launch-command [mode: string, base: string, --edit] {
   match $mode {
     "nvim" => {
       if $edit { return [nvim] }
+      let diff = $"CodeDiff ($base)..." | to json --raw
+      # Collapsed Zellij panes have no editing space; Neovim reports at least 3 lines.
+      let startup = [
+        'lua local function open_diff()'
+        'if vim.o.lines <= 3 then return false end'
+        ('vim.cmd(' + $diff + ')')
+        'return true'
+        'end'
+        'if not open_diff() then'
+        "vim.api.nvim_create_autocmd('VimResized', { callback = open_diff })"
+        'end'
+      ] | str join ' '
       [
         nvim
         # CodeDiff opens a new tab asynchronously; close the startup dashboard tab once it is ready.
         -c "autocmd User CodeDiffOpen ++once lua vim.schedule(function() vim.cmd('1tabclose') end)"
-        -c $"CodeDiff ($base)..."
+        -c $startup
       ]
     }
     "hunk" => {

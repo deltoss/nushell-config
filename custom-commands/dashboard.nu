@@ -29,7 +29,7 @@ export def main [
   const commands_dir = path self .
   let ticket_module = $commands_dir | path join ticket.nu | str replace --all '\' '/'
   let pr_module = $commands_dir | path join pr.nu | str replace --all '\' '/'
-  let datadog_module = $commands_dir | path join datadog.nu | str replace --all '\' '/'
+  let datadog_module = $commands_dir | path join datadog | str replace --all '\' '/'
   let ticket_command = $"use ($ticket_module | to nuon); ticket tui"
   let pr_command = $"use ($pr_module | to nuon); pr tui --workspace ($workspace | to nuon)"
   let datadog_command = $"use ($datadog_module | to nuon); datadog monitor tui"
