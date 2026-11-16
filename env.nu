@@ -101,3 +101,8 @@ $env.config.history = {
   sync_on_enter: true
   isolation: true
 }
+
+# Force Pi status reporting inside Zellij.
+if "ZELLIJ" in $env {
+  $env.PI_PROGRAM_STATUS = "1"
+}
