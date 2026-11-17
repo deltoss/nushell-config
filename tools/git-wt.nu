@@ -37,12 +37,9 @@ export def "nu-complete git-wt" [place: record] {
     }
 }
 
-# Override git-wt command with file-based directive passing.
-# Creates a temp file, passes path via WORKTRUNK_DIRECTIVE_FILE, executes directives after.
+# Override git-wt with file-based directory switching.
+# WORKTRUNK_DIRECTIVE_CD_FILE receives the raw destination path.
 # WORKTRUNK_BIN can override the binary path (for testing dev builds).
-#
-# Note: Nushell's `source` is parse-time only, so we can't source dynamic paths.
-# Instead, we read the directive file and execute each line.
 #
 # Nushell pipeline workaround (nushell/nushell#12643):
 #
@@ -60,7 +57,7 @@ export def "nu-complete git-wt" [place: record] {
 # - `list`: Direct passthrough. The binary is the last expression, so stdout
 #   streams to the terminal (progressive rendering) and flows through pipes
 #   (`git-wt list --format json | from json`). No directive processing — `list`
-#   never emits directives. No WORKTRUNK_DIRECTIVE_FILE is set.
+#   never emits directives. No WORKTRUNK_DIRECTIVE_CD_FILE is set.
 #
 # - Everything else: Stdout is redirected to a temp file via `o>`, then
 #   returned as the function's last expression after directive processing.
@@ -94,14 +91,14 @@ export def --env --wrapped git-wt [...args: string@"nu-complete git-wt"] {
         # terminal and flows through nushell pipelines.
         ^$worktrunk_bin ...$args
     } else {
-        let directive_file = (mktemp --tmpdir)
+        let cd_file = (mktemp --tmpdir)
         let stdout_file = (mktemp --tmpdir)
 
         # Capture stdout to file for pipeline passthrough; stderr flows to terminal.
         # Nushell 0.98+ throws ShellError on non-zero exit (like bash `set -e`).
         # `try` catches it so directive processing and temp file cleanup still run.
         let exit_code = (try {
-            with-env { WORKTRUNK_DIRECTIVE_FILE: $directive_file } {
+            with-env { WORKTRUNK_DIRECTIVE_CD_FILE: $cd_file } {
                 ^$worktrunk_bin ...$args o> $stdout_file
             }
             0
@@ -109,30 +106,13 @@ export def --env --wrapped git-wt [...args: string@"nu-complete git-wt"] {
             $env.LAST_EXIT_CODE
         })
 
-        # Process directive file line by line
-        if ($directive_file | path exists) and (open $directive_file --raw | str trim | is-not-empty) {
-            let directives = open $directive_file --raw | str trim | lines
-            for directive in $directives {
-                if ($directive | str starts-with "cd '") {
-                    # Parse cd command: worktrunk emits "cd '<path>'" with POSIX quoting.
-                    # Strip the "cd '" prefix and trailing "'" to extract the raw path.
-                    # Note: paths with embedded single quotes use POSIX '\'' escaping,
-                    # which this doesn't handle. A future improvement could have worktrunk
-                    # emit raw paths instead of POSIX shell commands, letting each shell
-                    # construct its native cd syntax.
-                    let target_dir = $directive | str substring 4..-2
-                    cd $target_dir
-                } else if ($directive | is-not-empty) {
-                    # Execute via sh for POSIX shell expansion (globs, pipes, $VAR).
-                    # --execute commands are user-provided shell expressions that expect
-                    # this. Env changes (export) won't persist in the nushell session,
-                    # but no worktrunk code emits export directives.
-                    ^sh -c $directive
-                }
-            }
+        # The cd file contains a raw path, not shell commands or quoting.
+        if ($cd_file | path exists) and (open $cd_file --raw | is-not-empty) {
+            let target_dir = open $cd_file --raw
+            cd $target_dir
         }
 
-        rm -f $directive_file
+        rm -f $cd_file
         let output = (open $stdout_file --raw)
         rm -f $stdout_file
 
