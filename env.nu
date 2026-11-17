@@ -93,6 +93,21 @@ let env_file = ($nu.default-config-dir | path join ".env.json")
 let vars = if ($env_file | path exists) { open $env_file } else { {} }
 load-env $vars
 
+# Cache Git's system-config path to avoid Starship's Windows `git --exec-path`
+# lookup on each prompt render. On Linux, its Git library uses
+# GIT_CONFIG_SYSTEM or /etc/gitconfig without that lookup.
+if $nu.os-info.name == "windows" and ($vars.GIT_CONFIG_SYSTEM? | default "" | str trim | is-empty) {
+  if ($env.GIT_CONFIG_SYSTEM? | default "" | str trim | is-empty) { hide-env -i GIT_CONFIG_SYSTEM }
+  try {
+    let result = (^git var GIT_CONFIG_SYSTEM | complete)
+    let paths = ($result.stdout | lines)
+    if $result.exit_code == 0 and ($paths | length) == 1 and ($paths.0 | path type) == "file" {
+      $vars | upsert GIT_CONFIG_SYSTEM $paths.0 | to json | save --force $env_file
+      $env.GIT_CONFIG_SYSTEM = $paths.0
+    }
+  } catch { }
+}
+
 # See: https://textmode.dev/from-zero-to-productive-my-nushell-config
 $env.COLORTERM = "truecolor"
 $env.config.history = {
