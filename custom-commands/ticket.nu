@@ -297,6 +297,6 @@ def --env resume-ticket [] {
 # Keep aliases after imports and sourced scripts so their built-in open/start calls stay intact.
 export alias open = open-ticket
 export alias start = start-ticket
-@example "Choose a ticket and open Pi in its worktree" { ticket ai }
+@example "Choose a ticket and open the AI harness in its worktree" { ticket ai }
 export def --env ai [] { start-ticket ai }
 export alias resume = resume-ticket
