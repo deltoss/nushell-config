@@ -14,7 +14,53 @@
 # options using:
 #     config nu --doc | nu-highlight | less -R
 
-use ./profiles/platform.nu [IS_TERMUX]
+# Custom hooks. Nushell's own hooks live in $env.config.hooks
+$env.hooks = ($env.hooks? | default {})
+$env.hooks.pre-pr-raise = ($env.hooks.pre-pr-raise? | default [])
 
-# Select at parse time so commands and aliases remain available in the shell.
-source (if $IS_TERMUX { "./profiles/termux.nu" } else { "./profiles/desktop.nu" })
+source ./tools/tools.nu
+
+# Aliases and `extern` completions are parse-time definitions.
+# They can't be wrapped in a `if $nu.is-interactive`. It'd silently discards
+# every alias and completion. Keep them at top level.
+source ./custom-completions/custom-completions.nu
+
+# Loaded after the completions on purpose: an `extern` and a `def` of the same name
+# are both plain declarations, so the last one parsed wins. The other way round,
+# `extern "git log"` from nu_scripts shadowed the `git log` command below.
+use ./custom-commands/ *
+
+$env.hooks.pre-pr-raise ++= [
+  {|_, dest_branch|
+    if (input "Do you want an AI review of your changes before raising the PR? [y/N] " | str trim | str lowercase) in ["y" "yes"] {
+      pr self-review $dest_branch
+      if (input "Proceed with raising the PR? [y/N] " | str trim | str lowercase) not-in ["y" "yes"] {
+        return false
+      }
+    }
+  }
+]
+
+source ./aliases/aliases.nu
+
+if $nu.is-interactive {
+  # Runtime `$env.config` mutation, unaffected by block scoping.
+  source ./keybinds.nu
+}
+
+# For preview of themes, see https://github.com/nushell/nu_scripts/blob/main/themes/screenshots/README.md
+# `use` (not `source`) skips the theme's self-activation. Activating it prints raw
+# OSC 10/11/12 colour escapes to stdout on every startup, which corrupts output when
+# nu runs non-interactively
+use ./nu_scripts/themes/nu-themes/atelier-cave-light.nu
+atelier-cave-light set color_config
+$env.config.tui.surface = {bg: $env.config.color_config.background}
+$env.config.tui.backdrop = {bg: $env.config.color_config.background}
+$env.config.tui.title_bar = {
+  fg: $env.config.color_config.foreground
+  bg: $env.config.color_config.background
+  attr: b
+}
+if $nu.is-interactive {
+    atelier-cave-light update terminal
+}

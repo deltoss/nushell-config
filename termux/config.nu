@@ -1,4 +1,4 @@
-# Only load tools intended for the mobile shell.
+# Load only the integrations needed on Termux.
 use ../tools/fzf.nu *
 use ../tools/yazi.nu *
 use ../tools/nvim.nu *
@@ -8,7 +8,7 @@ source ../tools/zoxide.nu
 source ../tools/starship.nu
 source ../tools/zellij.nu
 
-# Keep completions ahead of custom commands that override them.
+# Load completions before custom commands that override them.
 use ../nu_scripts/custom-completions/rg/rg-completions.nu *
 use ../nu_scripts/custom-completions/zoxide/zoxide-completions.nu *
 use ../nu_scripts/custom-completions/curl/curl-completions.nu *
@@ -24,4 +24,15 @@ use ../custom-completions/ya-completions.nu *
 use ../custom-commands/git.nu
 source ../aliases/git.nu
 
-source ./theme.nu
+use ../nu_scripts/themes/nu-themes/atelier-cave-light.nu
+atelier-cave-light set color_config
+$env.config.tui.surface = {bg: $env.config.color_config.background}
+$env.config.tui.backdrop = {bg: $env.config.color_config.background}
+$env.config.tui.title_bar = {
+  fg: $env.config.color_config.foreground
+  bg: $env.config.color_config.background
+  attr: b
+}
+if $nu.is-interactive {
+  atelier-cave-light update terminal
+}

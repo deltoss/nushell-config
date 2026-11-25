@@ -1,1 +1,0 @@
-export const IS_TERMUX = $nu.os-info.name == "android" or ($nu.current-exe | str contains "/com.termux/files/usr/")
